@@ -8,7 +8,12 @@ Group-level structural equation model search.
 Concatenates all individual-level data files and fits a group model to the data.
 }
 \usage{
-aggregate(data, sep, header, out, ar, plot)
+aggregate(data = "", 
+          sep = "", 
+          header = , 
+          out = "",
+          ar = FALSE, 
+          plot = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -39,20 +44,16 @@ Logical. If TRUE, graphs depicting relations among variables of interest will au
 Stephanie Lane
 }
 \examples{
-data(het1)
-data(het2)
-data(het3)
-data(het4)
-data(het5)
+data(ts1,ts2,ts3,ts4,ts5)
 input.path <- paste(file.path(tempdir()),"/input",sep="")
 dir.create(input.path)
 output.path <- paste(file.path(tempdir()),"/output",sep="")
 dir.create(output.path)
-write.table(het1,paste(input.path,"/het1.txt",sep=""),col.names=FALSE,row.names=FALSE)
-write.table(het2,paste(input.path,"/het2.txt",sep=""),col.names=FALSE,row.names=FALSE)
-write.table(het3,paste(input.path,"/het3.txt",sep=""),col.names=FALSE,row.names=FALSE)
-write.table(het4,paste(input.path,"/het4.txt",sep=""),col.names=FALSE,row.names=FALSE)
-write.table(het5,paste(input.path,"/het5.txt",sep=""),col.names=FALSE,row.names=FALSE)
+write.table(ts1,paste(input.path,"/ts1.txt",sep=""),col.names=FALSE,row.names=FALSE)
+write.table(ts2,paste(input.path,"/ts2.txt",sep=""),col.names=FALSE,row.names=FALSE)
+write.table(ts3,paste(input.path,"/ts3.txt",sep=""),col.names=FALSE,row.names=FALSE)
+write.table(ts4,paste(input.path,"/ts4.txt",sep=""),col.names=FALSE,row.names=FALSE)
+write.table(ts5,paste(input.path,"/ts5.txt",sep=""),col.names=FALSE,row.names=FALSE)
 aggregate.out <- aggregate(data = input.path,
                  sep = "",
                  header = FALSE,

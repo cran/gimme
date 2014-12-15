@@ -8,7 +8,13 @@ Semi-confirmatory group iterative multiple model estimation.
 This function identifies structural equation models consisting of group- and individual-level paths. The unique feature of this function is the ability to specify relations (paths) with which to begin model estimation. 
 }
 \usage{
-semigimme(paths, data, sep, header, out, plot = TRUE, ar = FALSE)
+semigimme(paths = ,
+          data = "", 
+          sep = "", 
+          header = , 
+          out = "",
+          ar = FALSE, 
+          plot = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

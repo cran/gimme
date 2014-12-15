@@ -8,7 +8,12 @@ Individual-level structural equation model search.
 This function identifies structural equation models for each individual. It does not utilize any shared information from the group.
 }
 \usage{
-indSEM(data, sep, header, out, ar, plot)
+indSEM(data = "", 
+       sep = "", 
+       header = , 
+       out = "",
+       ar = FALSE, 
+       plot = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

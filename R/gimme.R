@@ -77,6 +77,8 @@ setup <- function (data,
     for (i in (rois+1):(rois*2)) 
     {for (j in 1:(rois*2)) 
     {cat(lvarnames[i],"~",lvarnames[j],sep="","\n")}})
+  ar.paths <- capture.output(for (i in 1:rois){ 
+    cat(lvarnames[i+rois],"~",lvarnames[i],sep="","\n")})
   list <- list("subjects"=subjects,
                "rois"=rois, 
                "x"=x,
@@ -93,7 +95,8 @@ setup <- function (data,
                "plots"=plots,
                "plot.names"=plot.names,
                "syntax"=syntax,
-               "candidate.paths"=candidate.paths)
+               "candidate.paths"=candidate.paths,
+               "ar.paths"=ar.paths)
   return(list)
 }
 ########################################################################################
@@ -209,7 +212,9 @@ evalbetas <- function (bad,
                        out.files,
                        subjects,
                        rois,
-                       varnames) {
+                       varnames,
+                       ar.paths,
+                       ar) {
   op=NULL
   sig=NULL
   param=NULL
@@ -248,6 +253,10 @@ evalbetas <- function (bad,
     list.all$z <- as.numeric(as.character(list.all$z))
     list.all$sig <- ifelse(abs(list.all$z)>1.96, 1, 0)
     list.all <- transform(list.all, sum=ave(sig, param, FUN=sum))
+    # add line to not include AR as 
+    if (ar==TRUE){
+    list.all <- subset(list.all,!(param %in% ar.paths))
+    }
     if ((nrow(list.all)==0)==TRUE) bad <- 0
     paramdrop <- as.character(list.all[which.min(list.all$sum),1])
     #create histogram of t/z values
@@ -347,12 +356,14 @@ setupsemi <- function(paths,
     for (i in (rois+1):(rois*2)) 
     {for (j in 1:(rois*2)) 
     {cat(lvarnames[i],"~",lvarnames[j],sep="","\n")}})
+  ar.paths <- capture.output(for (i in 1:rois){ 
+    cat(lvarnames[i+rois],"~",lvarnames[i],sep="","\n")})
   list <- list("subjects"=subjects,"rois"=rois, "x"=x,"y"=y,
                "varnames"=varnames,"trackparts"=trackparts,"out.files"=out.files,
                "vars"=vars,"lvarnames"=lvarnames, "cutoffind"=cutoffind,
                "betas"=betas,"SEs"=SEs,"fitted"=fitted,"plots"=plots,
                "plot.names"=plot.names,"syntax"=syntax,"candidate.paths"=candidate.paths,
-               "count"=count)
+               "count"=count,"ar.paths"=ar.paths)
   return(list)
 }
 ########################################################################################
@@ -449,7 +460,9 @@ evalbetassemi <- function (bad,
                            subjects,
                            rois,
                            varnames,
-                           paths) {
+                           paths,
+                           ar.paths,
+                           ar) {
   op=NULL
   sig=NULL
   param=NULL
@@ -488,6 +501,9 @@ evalbetassemi <- function (bad,
     list.all$z <- as.numeric(as.character(list.all$z))
     list.all$sig <- ifelse(abs(list.all$z)>1.96, 1, 0)
     list.all <- transform(list.all, sum=ave(sig, param, FUN=sum))
+    if (ar==TRUE){
+    list.all <- subset(list.all,!(param %in% ar.paths))
+    }
     list.all <- subset(list.all,!(param %in% paths))
     if ((nrow(list.all)==0)==TRUE) bad <- 0
     paramdrop <- as.character(list.all[which.min(list.all$sum),1])
@@ -937,6 +953,7 @@ wrapup <- function(all.elements,
   param=NULL
   all.elements.final <- as.data.frame(all.elements)
   all.elements.final$est.std <- as.numeric(as.character(all.elements.final$est.std))
+  ##DEBUG HERE TOMORROW##
   if (agg==FALSE) {
     all.elements.final <- transform(all.elements, 
                                     mean.beta = (ave(est.std, param, FUN=sum))/subjects)
@@ -993,7 +1010,7 @@ wrapup <- function(all.elements,
   write.table(all.fit,file=allfit,sep=",",row.names=FALSE)
   all.elements <- all.elements[c("subject","param","est.std","se","pvalue","z")]
   if (agg==TRUE) {all.elements[,1] <- "all"; all.elements.summary <- data.frame()}
-
+  # insert code here to sub back variable names into all.elements summary and all.elements
   if (header==TRUE){
     for (v in 1:length(varnames)){
       all.elements$param <- gsub(lvarnames[v],varnames[v],all.elements$param)
@@ -1015,8 +1032,9 @@ gimme <- function(data,
                   sep,
                   header,
                   out,
-                  plot = TRUE,
-                  ar = FALSE){
+                  ar = FALSE,
+                  plot = TRUE)
+                 {
   
   setup.out <- setup(data = data, 
                      sep = sep,
@@ -1040,7 +1058,9 @@ gimme <- function(data,
                              out.files = setup.out$out.files, 
                              subjects = setup.out$subjects,
                              rois = setup.out$rois,
-                             varnames = setup.out$varnames)
+                             varnames = setup.out$varnames,
+                             ar.paths = setup.out$ar.paths,
+                             ar=ar)
   
   indsem.internal.out <- indsem.internal(subjects = setup.out$subjects,
                                          varnames = setup.out$varnames,
@@ -1075,8 +1095,8 @@ semigimme <- function(paths,
                       sep,
                       header,
                       out,
-                      plot=TRUE,
-                      ar=FALSE){
+                      ar = FALSE,
+                      plot = TRUE){
   
   setup.out <- setupsemi(paths = paths,
                          data = data, 
@@ -1103,7 +1123,9 @@ semigimme <- function(paths,
                                  subjects = setup.out$subjects,
                                  rois = setup.out$rois,
                                  varnames = setup.out$varnames,
-                                 paths = paths)
+                                 paths = paths,
+                                 ar.paths = setup.out$ar.paths,
+                                 ar=ar)
   
   indsem.internal.out <- indsem.internal(subjects = setup.out$subjects,
                                          varnames = setup.out$varnames,
@@ -1204,8 +1226,8 @@ indSEM <- function(data,
                    sep,
                    header,
                    out,
-                   ar=FALSE,
-                   plot=TRUE){
+                   ar = FALSE,
+                   plot = TRUE){
   
   setup.out <- setup(data = data, 
                      sep = sep, 

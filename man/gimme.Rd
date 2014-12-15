@@ -8,7 +8,12 @@ Group iterative multiple model estimation.
 This function identifies structural equation models for each individual that consist of both group-level and individual-level paths.
 }
 \usage{
-gimme(data, sep, header, out, plot, ar)
+gimme(data = "", 
+      sep = "", 
+      header = , 
+      out = "",
+      ar = FALSE, 
+      plot = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -37,7 +42,7 @@ Logical. If TRUE, graphs depicting relations among variables of interest will au
 \item{all.fit}{Contains model fit information for individual-level models.}
 }
 \references{
-Gates & Molenaar, 2012
+Gates, K.M. & Molenaar, P.C.M. (2012). Group search algorithm recovers effective connectivity maps for individuals in homogeneous and heterogeneous samples. NeuroImage, 63, 310-319.
 }
 \author{
 Stephanie Lane
