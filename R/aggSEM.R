@@ -4,20 +4,20 @@
 #' @description Concatenates all individual-level data files and fits a group model to the data.
 #' @usage
 #' aggSEM(data   = "",
+#'        out    = "",
 #'        sep    = "",
 #'        header = ,
-#'        out    = "",
 #'        ar     = FALSE,
 #'        plot   = TRUE,
 #'        paths  = NULL)
-#' @param data Path to the directory where the data files are located. Each file must contain one matrix for
+#' @param data The path to the directory where the data files are located. Each file must contain one matrix for
 #' each individual containing a T (time) by p (number of variables) matrix where the columns represent variables
 #' and the rows represent time.
+#' @param out The path to the directory where the results will be stored. This directory must be generated
+#' by the user prior to running the function.
 #' @param sep The spacing of the data files. "" indicates space-delimited, "/t" indicates tab-delimited, ","
 #' indicates comma delimited.
 #' @param header Logical. Indicate TRUE for data files with a header.
-#' @param out The path to the directory where the results will be stored. This directory must be generated
-#' by the user prior to running the function.
 #' @param ar Logical. If TRUE, begins search for group model with autoregressive (AR) paths open. Defaults
 #' to FALSE.
 #' @param plot Logical. If TRUE, graphs depicting relations among variables of interest will automatically
@@ -29,14 +29,11 @@
 #' @details
 #'  In main output directory:
 #'  \itemize{
-#'  \item{all.elements} {Contains information for all paths identified for the concatenated samplel.}
-#'  \item{all.fit} {Contains model fit information for final aggregate-level model.}
-#'  }
-#'  In individual output directory:
-#'  \itemize{
-#'  \item{betas} Directory, contains estimates for aggregate-level model. Names are all_contemp and all_lagged.
-#'  \item{SEs} Directory, contains standard errors for aggregate-level model. Names are all_contemp and all_lagged.
-#'  \item{plots} Directory, contains aggregate-level plot. Red paths represent positive weights and blue paths represent negative weights.
+#'  \item{\strong{allBetas}} Matrix. Contains estimates for each path in the aggregate-level model. The row variable is the outcome and the column variable is the predictor variable.
+#'  \item{\strong{allStdErrors}} Matrix. Contains standard errors for each path in the aggregate-level model. The row variable is the outcome and the column variable is the predictor variable.
+#'  \item{\strong{allPathEstimates}} {Contains estimate, standard error, p-value, and z-value for each path for the concatenated data.}
+#'  \item{\strong{summaryFit}} {Contains model fit information for the aggregate-level model.}
+#'  \item{\strong{summaryPathsPlot}} Contains aggregate-level plot. Red paths represent positive weights and blue paths represent negative weights.
 #' }
 #' @author Stephanie Lane
 #' @examples
@@ -51,17 +48,17 @@
 #' write.table(ts4,file.path(input.path,"ts4.txt"),col.names=FALSE,row.names=FALSE)
 #' write.table(ts5,file.path(input.path,"ts5.txt"),col.names=FALSE,row.names=FALSE)
 #' aggSEM(data   = input.path,
+#'        out    = output.path,
 #'        sep    = "",
 #'        header = FALSE,
-#'        out    = output.path,
 #'        ar     = TRUE,
 #'        plot   = TRUE,
 #'        paths  = NULL)
 #' @export
 aggSEM <- function(data,
+                   out,
                    sep,
                    header,
-                   out,
                    ar    = FALSE,
                    plot  = TRUE,
                    paths = NULL){
@@ -75,6 +72,9 @@ aggSEM <- function(data,
   files    = list.files(setup.out$data,full.names=TRUE)
   header   = setup.out$header
   sep      = setup.out$sep
+  subgroup = setup.out$subgroup
+  agg      = setup.out$agg
+  plot     = setup.out$plot
 
   data.all <- data.frame()
   for (k in 1:subjects){
@@ -102,9 +102,7 @@ aggSEM <- function(data,
   final.fit.out <- final.fit(setup.out     = setup.out,
                              fixfitind.out = fixfitind.out,
                              data.file     = data.all,
-                             k             = 1,
-                             agg           = TRUE,
-                             plot          = plot)
+                             k             = 1)
 
   all.elements <- final.fit.out$ind.elements
   all.fit      <- as.matrix(final.fit.out$ind.fit)
@@ -126,14 +124,15 @@ aggSEM <- function(data,
                      plot     = plot,
                      ar       = ar,
                      paths    = NULL,
-                     subgroup = FALSE)
+                     subgroup = FALSE,
+                     agg      = TRUE,
+                     deconvolve_hrf = FALSE,
+                     control=list(deconvolve_method="bush"))
 
   agg.internal.out <- agg.internal(setup.out = setup.out)
 
   wrapup.out <- wrapup(indsem.internal.out = agg.internal.out,
-                       setup.out           = setup.out,
-                       agg                 = TRUE,
-                       subgroup            = FALSE)
+                       setup.out           = setup.out)
 
   print.gimme.aggSEM(z=setup.out)
 }
