@@ -1,10 +1,10 @@
-b0174580a7fe5a0dbea6c2e9efc26f2c *DESCRIPTION
-856c4f90ff298f21e616579422957a4c *NAMESPACE
+f405a3092e52a065b693f6047beac4e7 *DESCRIPTION
+e031ba2f67dec8ef7a01296ac87bf11a *NAMESPACE
 a5ef12937ba91903ee3d9a6fb978c083 *R/aggSEM.R
 ee3c2fa55ef6fcd9a773b436cba150c9 *R/deconvolve_funcs.R
 f984c33492e4b55207f47e29b82f9dfd *R/gimme-data.R
 53d78e079db2d8e9bf572a0ec2ff0dd2 *R/gimme-pkg.R
-b97ecf34cdba6ed5af98e2b3f2a0a0b0 *R/gimme.R
+2889b07e717b0f4e0739f1c24c599793 *R/gimme.R
 b316970d8104c7d19428472c416ff4eb *R/gimmeInteractive.R
 88682dd8d72c7542e754121038e6257d *R/indSEM.R
 7abbe7be00a18aa62d239be08aeef279 *R/spm_funcs.R
@@ -16,7 +16,7 @@ a8034ed044c9f9738e911d7e9d0ba5a1 *data/ts5.rda
 95b9ea089f3797ee4d54f968848591c5 *man/aggSEM.Rd
 93986d7576e046c7ad4d23beab2e0014 *man/gimme-package.Rd
 21aee15340d55fe7bddb7915bbe56fe5 *man/gimmeInteractive.Rd
-5de65d44adadca998dccb04a15fe6433 *man/gimmeSEM.Rd
+877273fbda7827f032a43190b0a117fe *man/gimmeSEM.Rd
 33db673ecb3d0459a600ef5004f2b199 *man/indSEM.Rd
 70ad7e4be99a98d5af76b2ddd4d02bea *man/ts1.Rd
 a4a3d96665ab9438df30a2843f1f21cc *man/ts2.Rd
