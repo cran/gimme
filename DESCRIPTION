@@ -1,7 +1,7 @@
 Package: gimme
 Title: Group Iterative Multiple Model Estimation
-Version: 0.1-5
-Date: 2015-10-20
+Version: 0.1-6
+Date: 2015-10-27
 Author: Stephanie Lane [aut, cre, trl],
             Kathleen Gates [aut], 
             Peter Molenaar [aut],
@@ -9,7 +9,7 @@ Author: Stephanie Lane [aut, cre, trl],
             Hallie Pike [ctb]
 Maintainer: Stephanie Lane <slane@unc.edu>
 Depends: R (>= 3.0.2)
-Imports: lavaan (>= 0.5-17), MASS, doSNOW, foreach, snow, igraph,
+Imports: lavaan (>= 0.5-19), MASS, doSNOW, foreach, snow, igraph,
         qgraph, parallel, doParallel, gWidgets2
 Suggests: gWidgets2RGtk2
 Description: Automated identification and estimation of group- and
@@ -17,7 +17,7 @@ Description: Automated identification and estimation of group- and
     equation modeling framework.
 License: GPL-2
 LazyData: Yes
-Packaged: 2015-10-20 13:47:04 UTC; stlane
+Packaged: 2015-10-27 15:09:18 UTC; stlane
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2015-10-20 21:13:04
+Date/Publication: 2015-10-27 16:33:10
