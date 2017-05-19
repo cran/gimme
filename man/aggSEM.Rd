@@ -55,8 +55,13 @@ In main output directory:
 }
 }
 \examples{
-fit <- aggSEM(data = ts)
-print(fit, fitMeasures = TRUE)
+\dontrun{
+exFit <- aggSEM(data = ts)
+}
+\dontshow{
+load(system.file("extdata", "sysdata.rda", package = "gimme"))
+}
+plot(exFit)
 }
 \author{
 Stephanie Lane

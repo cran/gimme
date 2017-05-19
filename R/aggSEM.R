@@ -42,8 +42,13 @@
 #' }
 #' @author Stephanie Lane
 #' @examples
-#' fit <- aggSEM(data = ts)
-#' print(fit, fitMeasures = TRUE)
+#' \dontrun{
+#' exFit <- aggSEM(data = ts)
+#' }
+#' \dontshow{
+#' load(system.file("extdata", "sysdata.rda", package = "gimme"))
+#' }
+#' plot(exFit)
 #' @export
 aggSEM <- function(data,
                    out = NULL,
@@ -59,7 +64,6 @@ aggSEM <- function(data,
   varnames = setup.out$varnames
   syntax   = setup.out$syntax
   plot     = setup.out$plot
-  # files    = list.files(setup.out$data,full.names=TRUE)
   header   = setup.out$header
   sep      = setup.out$sep
   data_list  = setup.out$ts_list
@@ -67,14 +71,6 @@ aggSEM <- function(data,
   agg      = setup.out$agg
   plot     = setup.out$plot
 
-  # data.all <- data.frame()
-  # for (k in 1:subjects){
-  #   data.file <- read.data(files[k],
-  #                          header = header,
-  #                          sep    = sep)
-  #   data.all  <- rbind(data.all,data.file)
-  # }
-  
   data.all <- do.call(rbind, data_list)
   
   colnames(data.all) <- c(varnames)
@@ -103,7 +99,7 @@ aggSEM <- function(data,
   all_fit  <- as.matrix(final.fit.out$ind.fit)
   all_fit[,1]  <- "all"
   colnames(all_fit) <- c("subject", "chisq", "df", "pval",
-                         "rmsea", "srmr", "nnfi", "cfi", "status")
+                         "rmsea", "srmr", "cfi", "nnfi", "bic", "status")
   row.names(all_elem) <- NULL
   
   ind_plot <- final.fit.out$ind_plot

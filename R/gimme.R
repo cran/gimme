@@ -272,7 +272,10 @@ gimmeSEM <- gimme <- function(data           = NULL,
     
   }
   
-  if (subgroup == FALSE) evalbetassub.out <- NULL
+  if (subgroup == FALSE) {
+    evalbetassub.out <- NULL
+    subsetup.out <- NULL
+  }
   
   ## this is the individual-level search, adds path for each individual
   ## runs one person at a time  indsem.internal.out <- list
@@ -307,7 +310,9 @@ gimmeSEM <- gimme <- function(data           = NULL,
                 h = wrapup.out$sub_plots,
                 i = setup.out$subgroup,
                 j = wrapup.out$all_counts,
-                k = wrapup.out$sub_paths)
+                k = wrapup.out$sub_paths,
+                l = indsem.internal.out$vcov_params,
+                m = subsetup.out$sim)
   
   class(final) <- "gimmep"
   
@@ -600,10 +605,8 @@ setup <- function (data,
   return(list)
 }
 
-
 ## model for lavaan
-fit.model <- function (varnames,
-                       syntax,
+fit.model <- function (syntax,
                        data.file) {
   
   fit <- tryCatch(lavaan::lavaan(syntax,
@@ -625,18 +628,6 @@ fit.model <- function (varnames,
   return(fit)
 }
 
-## quick function that bypasses the need to read in data and write it back out
-## just reads in file and creates the lagged vars
-# read.data <- function (file,
-#                        sep,
-#                        header) {
-#   all       <- as.matrix(read.table(file, sep = sep, header = header))
-#   first     <- all[1:(nrow(all)-1), ]
-#   second    <- all[2:nrow(all), ]
-#   data.file <- data.frame(first, second)
-#   return(data.file)
-# }
-
 count_excellent <- function(indices){
   rmsea     <- indices[4]
   srmr      <- indices[5]
@@ -649,6 +640,13 @@ count_excellent <- function(indices){
   excellent <- sum(rmseaE, srmrE, cfiE, nnfiE)
   return(excellent)
 }
+
+# -- new note -- #
+# create function that just takes the highest MI 
+# feed it syntax, cutoff value, and cutoff proportion
+# it updates the syntax object
+# need to also feed in whether or not it is first round or second round?
+# move toward storing everything in a list
 
 ## this function is responsible for the group-level search procedure
 miSEM <- function (setup.out,
@@ -712,10 +710,6 @@ miSEM <- function (setup.out,
     ## section below just iteratively fits model, grabs MIs, selects one significant
     ## for most people, adds to syntax, continues until no path sig for majority (75%)
     for (k in 1:subjects){
-      # data.file           <- read.data(file   = files[k],
-      #                                  sep    = sep,
-      #                                  header = header)
-      # colnames(data.file) <- c(varnames)
       fit                 <- fit.model(syntax    = syntax,
                                        data.file = ts_list[[k]])
       
@@ -834,7 +828,7 @@ evalbetas <- function (setup.out,
   ar                = setup.out$ar
   varnames          = setup.out$varnames
   rois              = setup.out$rois
-  n_fixed_paths       = setup.out$n_fixed_paths
+  n_fixed_paths     = setup.out$n_fixed_paths
   groupcutoff       = setup.out$groupcutoff
   subcutoff         = setup.out$subcutoff
   
@@ -892,11 +886,6 @@ evalbetas <- function (setup.out,
     
     for (k in 1:subjects){
       if (post_sub_prune == TRUE) syntax  <- syntax.all[k, ]
-      
-      # data.file           <- read.data(file   = files[k],
-      #                                  sep    = sep,
-      #                                  header = header)
-      # colnames(data.file) <- c(varnames)
       fit                 <- fit.model(syntax    = syntax,
                                        data.file = ts_list[[k]])
       
@@ -931,7 +920,7 @@ evalbetas <- function (setup.out,
         # for a person, which could result in it not being in the z.list object
         # this would then cause the object to be empty and throw an error later
         if (nrow(z.list) == 0 & post_sub_prune == TRUE){
-          z.list <- matrix(NA, nrow = length(group_paths), ncol = 2)
+          z.list <- matrix(NA, nrow = n_group_paths, ncol = 2)
         } 
         if (nrow(z.list) == 0 & post_sub_prune == FALSE){
           z.list <- matrix(NA, nrow = (rois + n_group_paths), ncol = 2)
@@ -944,7 +933,7 @@ evalbetas <- function (setup.out,
         if (post_sub_prune == FALSE){
           z.list <- matrix(NA, nrow = (rois + n_group_paths), ncol = 2)
         } else {
-          z.list <- matrix(NA, nrow = length(group_paths), ncol = 2)
+          z.list <- matrix(NA, nrow = n_group_paths, ncol = 2)
         }
         ## printing the step
         if(subgroup.step == FALSE) {
@@ -1111,12 +1100,12 @@ addind <- function (done,
     } else check_zero_se = TRUE
     
     if (check_npd == FALSE & check_zero_se == FALSE) {
-      all_mi            <- tryCatch(modindices(fit), error=function(e) e)
-      check_singular    <- any(grepl("singular", all_mi) == TRUE)
-      empty_mi          <- ifelse(nrow(all_mi) == 0, TRUE, FALSE)
-      if (check_singular == TRUE) empty_mi <- TRUE
+      #all_mi            <- tryCatch(modindices(fit), error=function(e) e)
+      #check_singular    <- any(grepl("singular", all_mi) == TRUE)
+      #empty_mi          <- ifelse(nrow(all_mi) == 0, TRUE, FALSE)
+      #if (check_singular == TRUE) empty_mi <- TRUE
       converge          <- lavInspect(fit, "converged")
-      check_error       <- any(grepl("error", class(all_mi)) == TRUE)
+      #check_error       <- any(grepl("error", class(all_mi)) == TRUE)
       if (converge == FALSE){
         check_fit <- FALSE
       } else if (converge == TRUE){
@@ -1131,20 +1120,16 @@ addind <- function (done,
       empty_mi       <- TRUE
     }
     
-    if (converge == TRUE & check_singular == FALSE & check_npd == FALSE &
-        check_zero_se == FALSE & check_error == FALSE & 
-        check_fit == FALSE & empty_mi == FALSE) {
+    if (converge == TRUE & check_npd == FALSE &
+        check_zero_se == FALSE & check_fit == FALSE) {
       indices   <- fitMeasures(fit,c("chisq","df","pvalue","rmsea",
                                      "srmr", "nnfi","cfi"))
       excellent <- count_excellent(indices)
       if (excellent >= 2) {done <- 1; fixfit <- 0}
     } else {done <- 1;  fixfit <- 0; evaluate <- 0}
     if (converge == FALSE)      done <- 1
-    if (check_singular == TRUE) done <- 1
     if (check_fit == TRUE)      done <- 1
-    if (check_error == TRUE)    done <- 1
     if (check_npd == TRUE)      done <- 1
-    if (empty_mi == TRUE)       done <- 1
   }
   if (count.ind.paths==0) evaluate <- 0
   list <- list("evaluate" = evaluate,
@@ -1196,9 +1181,9 @@ evalind <- function (addind.out,
       indlist        <- as.data.frame(indlist)
       indlist$z      <- as.numeric(as.character(indlist$z))
       indlist        <- subset(indlist, param %in% vec.MI)
-      parampruneposs <- as.character(indlist[which.min(indlist$z),1])
-      parampruneval  <- as.numeric(indlist[which.min(indlist$z),2])
-      prune          <- ifelse(parampruneval>1.96, 0, 1)
+      parampruneposs <- as.character(indlist[which.min(abs(indlist$z)),1])
+      parampruneval  <- as.numeric(indlist[which.min(abs(indlist$z)),2])
+      prune          <- ifelse(abs(parampruneval)>1.96, 0, 1)
       if (nrow(indlist) == 0) prune <- 0
       if (prune == 1) {
         syntax       <- unlist(strsplit(syntax, "[\n]"))
@@ -1213,18 +1198,18 @@ evalind <- function (addind.out,
       check_zero_se <- sum(lavInspect(fit,"se")$beta,na.rm=TRUE)==0
       
       if (check_npd == FALSE & check_zero_se==FALSE) {
-        all_mi            <- tryCatch(modindices(fit),error=function(e) e)
-        check_singular      <- any(grepl("singular",all_mi)==TRUE)
+        #all_mi            <- tryCatch(modindices(fit),error=function(e) e)
+        #check_singular      <- any(grepl("singular",all_mi)==TRUE)
         converge            <- lavInspect(fit, "converged")
-        check_error         <- any(grepl("error",class(all_mi))==TRUE)
+        #check_error         <- any(grepl("error",class(all_mi))==TRUE)
       } else {
         check_singular <- TRUE
         converge       <- FALSE
         check_error    <- TRUE
       }
       
-      if (converge==TRUE & check_singular==FALSE & check_npd==FALSE & 
-          check_zero_se==FALSE & check_error == FALSE){
+      if (converge==TRUE & check_npd==FALSE & 
+          check_zero_se==FALSE){
         indices      <- fitMeasures(fit,c("chisq","df","pvalue",
                                           "rmsea","srmr",
                                           "nnfi","cfi"))
@@ -1232,7 +1217,7 @@ evalind <- function (addind.out,
         fixfit    <- ifelse(excellent >= 2, 0, 1)
         # if it doesn't converge
       }
-      if (converge == FALSE | check_singular == TRUE) {evaluate <- 0; fixfit <- 0}
+      if (converge == FALSE | check_zero_se == TRUE) {evaluate <- 0; fixfit <- 0}
     }
   }
   list <- list("fixfit" = fixfit,
@@ -1255,8 +1240,7 @@ fixfitind <- function (setup.out,
   param = NULL
   
   while (fixfit == 1) {
-    fit <- fit.model(varnames  = varnames,
-                     syntax    = syntax,
+    fit <- fit.model(syntax    = syntax,
                      data.file = data.file)
     
     check_npd            <- any(grepl("error", class(fit)) == TRUE)
@@ -1380,10 +1364,11 @@ final.fit <- function(setup.out,
     }
   }
   
-  ind.fit <- matrix(NA, nrow = 1, ncol = 9)
+  ind.fit <- matrix(NA, nrow = 1, ncol = 10)
   if (converge == TRUE & check_singular == FALSE) {
+    vcov_ind <- lavInspect(fit, "vcov.std.all")
     indices <- fitMeasures(fit,c("chisq","df","pvalue","rmsea",
-                                 "srmr", "nnfi","cfi"))
+                                 "srmr", "nnfi","cfi", "bic"))
     # insert indfit
     ind.fit[1,2] <- round(indices[1], digits = 4)
     ind.fit[1,3] <- indices[2]
@@ -1392,10 +1377,11 @@ final.fit <- function(setup.out,
     ind.fit[1,6] <- round(indices[5], digits = 4)
     ind.fit[1,7] <- round(indices[7], digits = 4)
     ind.fit[1,8] <- round(indices[6], digits = 4)
+    ind.fit[1,9] <- round(indices[8], digits = 4)
     if (last.converge == FALSE) {
-      ind.fit[1,9] <- "last known convergence"
+      ind.fit[1,10] <- "last known convergence"
     } else {
-      ind.fit[1,9] <- "converged normally"
+      ind.fit[1,10] <- "converged normally"
     }
     
     indlist              <- subset(standardizedSolution(fit), op == "~")
@@ -1460,10 +1446,7 @@ final.fit <- function(setup.out,
       Contemporaneous        <- individual.paths.t[(rois+1):(rois*2),(rois+1):(rois*2)]
       eLagged                <- W2E(Lagged)
       eContemporaneous       <- W2E(Contemporaneous)
-      isLagged               <- c(rep(TRUE, nrow(eLagged)), rep(FALSE, nrow(eContemporaneous)))
-      # if an element is repeated, change its curve value
-      curve                  <- rep(1, length(isLagged))
-      curve[which(duplicated(rbind(eLagged, eContemporaneous)[,1:2]))] <- .5
+      isLagged               <- c(rep(TRUE, sum(Lagged != 0)), rep(FALSE, sum(Contemporaneous != 0)))
       plotind                <- file.path(individual,paste0(trackparts[k,2],"Plot.pdf"))
       if (agg == TRUE) {
         plotind <- file.path(out, "summaryPathsPlot.pdf")
@@ -1472,18 +1455,18 @@ final.fit <- function(setup.out,
                                   layout              = "circle",
                                   lty                 = ifelse(isLagged,2, 1),
                                   edge.labels         = F,
-                                  # curve               = curve,
                                   curve               = FALSE,
                                   parallelEdge        = TRUE,
                                   fade                = FALSE,
                                   posCol              = "red",
                                   negCol              = "blue",
                                   labels              = plot.names,
-                                  label.cex           = 3,
+                                  label.cex           = 2,
                                   edge.label.cex      = 1.5,
                                   edge.label.position = .3,
                                   DoNotPlot           = TRUE),error=function(e) e)
-      if (!is.null(out)){
+      donotplot <- ifelse("error" %in% class(ind_plot), TRUE, FALSE)
+      if (!is.null(out) & !donotplot){
         pdf(plotind)
         plot(ind_plot)
         dev.off()
@@ -1491,25 +1474,29 @@ final.fit <- function(setup.out,
     }
   }
   if (converge == FALSE) {
-    ind.fit[1,9] <- "nonconvergence"
+    ind.fit[1,10] <- "nonconvergence"
     indlist      <- data.frame()
     individual.paths <- data.frame()
+    vcov_ind <- NA
   }
   if (check_singular == TRUE) {
-    ind.fit[1,9] <- "computationally singular"
+    ind.fit[1,10] <- "computationally singular"
     indlist      <- data.frame()
     individual.paths <- data.frame()
+    vcov_ind <- NA
   }
   if (check_error == TRUE) {
-    ind.fit[1,9] <- "error"
+    ind.fit[1,10] <- "error"
     indlist      <- data.frame()
     individual.paths <- data.frame()
+    vcov_ind <- NA
   }
   list <- list("ind.fit"      = ind.fit,
                "ind.elements" = indlist,
                "syntax"       = syntax,
                "ind.paths"    = individual.paths,
-               "ind_plot"     = ind_plot)
+               "ind_plot"     = ind_plot,
+               "vcov_ind"     = vcov_ind)
   return(list)
 }
 
@@ -1527,12 +1514,13 @@ indsem.internal <- function(setup.out,
   ts_list          = setup.out$ts_list
   
   all_elem          <- data.frame()
-  all_fit           <- matrix(NA, nrow=subjects, ncol=9)
+  all_fit           <- matrix(NA, nrow=subjects, ncol=10)
   all_syntax        <- matrix(NA, nrow=subjects,ncol=4)
   all_ind_paths     <- list()
   all_plots         <- list()
+  vcov_params       <- list()
   colnames(all_fit) <- c("subject", "chisq", "df", "pval",
-                         "rmsea", "srmr", "nnfi", "cfi", "status")
+                         "rmsea", "srmr", "cfi", "nnfi", "bic", "status")
   
   #files            <- list.files(data, full.names=TRUE)
   
@@ -1621,6 +1609,7 @@ indsem.internal <- function(setup.out,
     all_syntax[k,1]    <- k
     all_ind_paths[[k]] <- final.fit.out$ind.paths
     all_plots[[k]]     <- final.fit.out$ind_plot
+    vcov_params[[k]]   <- final.fit.out$vcov_ind
     # names(all_ind_paths[k]) <- trackparts[k,2]
   }
   
@@ -1631,6 +1620,7 @@ indsem.internal <- function(setup.out,
   colnames(all_syntax) <- c("subject", "files", "syntax_ind", "syntax_group")
   names(all_ind_paths) <- trackparts[ ,2]
   names(all_plots)     <- trackparts[ ,2]
+  names(vcov_params)   <- trackparts[ ,2]
   
   if (subgroup == TRUE){
     colnames(sorted)[3] <- c("syntax_sub")
@@ -1640,7 +1630,7 @@ indsem.internal <- function(setup.out,
     modularity         <- append(modularity, rep("",nrow(all_fit)-1))
     all_fit            <- cbind(all_fit,modularity)
     colnames(all_fit)  <- c("subject", "chisq", "df", "pval",
-                            "rmsea", "srmr", "nnfi", "cfi", 
+                            "rmsea", "srmr", "cfi", "nnfi", "bic",
                             "status", "subgroup", "modularity")
     
   } else all.syntax_sub <- as.data.frame(all_syntax)
@@ -1650,7 +1640,8 @@ indsem.internal <- function(setup.out,
                "all_syntax"   = all.syntax_sub,
                "all_diff_sub" = all.diff.subgroups,
                "all_ind_paths" = all_ind_paths, 
-               "all_plots"     = all_plots)
+               "all_plots"     = all_plots,
+               "vcov_params"   = vcov_params)
   return(list)
 }
 
@@ -1675,7 +1666,7 @@ wrapup <- function(indsem.internal.out,
   agg          = setup.out$agg
   subgroup     = setup.out$subgroup
   all_ind_paths = indsem.internal.out$all_ind_paths
-  
+
   present = NULL
   sig     = NULL
   est.std = NULL
@@ -1792,7 +1783,7 @@ wrapup <- function(indsem.internal.out,
           colorContemporaneous  <- sub.colors.t[(rois+1):(rois*2),(rois+1):(rois*2)]
           color.list       <- c(colorLagged,colorContemporaneous)
           color.list       <- color.list[!is.na(color.list)]
-          isLagged         <- c(rep(TRUE,nrow(eLagged)), rep(FALSE,nrow(eContemporaneous)))
+          isLagged         <- c(rep(TRUE, sum(Lagged != 0)), rep(FALSE, sum(Contemporaneous != 0)))
           # if an element is repeated, change its curve value
           curve            <- rep(1, length(isLagged))
           curve[which(duplicated(rbind(eLagged, eContemporaneous)[,1:2]))] <- .5
@@ -1807,7 +1798,7 @@ wrapup <- function(indsem.internal.out,
                                       labels              = plot.names,
                                       edge.color          = color.list,
                                       fade                = FALSE,
-                                      label.cex           = 3,
+                                      label.cex           = 2,
                                       edge.label.cex      = 1.5,
                                       edge.label.position = .3,
                                       DoNotPlot           = TRUE), error=function(e) e)
@@ -1943,7 +1934,7 @@ wrapup <- function(indsem.internal.out,
       colorContemporaneous  <- final.colors.t[(rois+1):(rois*2),(rois+1):(rois*2)]
       color.list       <- c(colorLagged,colorContemporaneous)
       color.list       <- color.list[!is.na(color.list)]
-      isLagged         <- c(rep(TRUE, nrow(eLagged)), rep(FALSE, nrow(eContemporaneous)))
+      isLagged         <- c(rep(TRUE, sum(Lagged != 0)), rep(FALSE, sum(Contemporaneous != 0)))
       plotfinal        <- file.path(out,"summaryPathsPlot.pdf")
       # if an element is repeated, change its curve value
       curve                  <- rep(1, length(isLagged))
@@ -1960,7 +1951,7 @@ wrapup <- function(indsem.internal.out,
                                   labels              = plot.names,
                                   edge.color          = edge.color,
                                   fade                = FALSE,
-                                  label.cex           = 3,
+                                  label.cex           = 2,
                                   edge.label.cex      = 1.5,
                                   edge.label.position = .3,
                                   DoNotPlot           = TRUE),error=function(e) e)
@@ -2378,3 +2369,10 @@ recoderFunc <- function(data,
   newvec
 }
 ################################################################################
+expand.grid.unique <- function(x, y, incl.eq = TRUE){
+  g <- function(i){
+    z <- setdiff(y, x[seq_len(i - incl.eq)])
+    if(length(z)) cbind(x[i], z, deparse.level = 0)
+  }
+  do.call(rbind, lapply(seq_along(x), g))
+}
