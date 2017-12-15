@@ -156,7 +156,7 @@ gimmeSEM <- gimme <- function(data           = NULL,
                               subcutoff      = .5,
                               diagnos        = FALSE){
 
-  membership = NULL
+  sub_membership = NULL
 
   dat         <- setup(data                 = data,
                        sep                  = sep,
@@ -225,10 +225,10 @@ gimmeSEM <- gimme <- function(data           = NULL,
     sub_s <- list(sub_paths     = character(),
                   n_sub_paths   = 0,
                   sub_s_subjids = subset(sub$sub_mem,
-                                         membership == s)[ ,"names"],
-                  n_sub_subj    = sum(sub$sub_mem$membership == s,
+                                         sub_membership == s)[ ,"names"],
+                  n_sub_subj    = sum(sub$sub_mem$sub_membership == s,
                                       na.rm = TRUE),
-                  membership    = s)
+                  sub_membership    = s)
 
     if (sub_s$n_sub_subj > 1){
       s4 <- search.paths(base_syntax  = dat$syntax,
@@ -268,7 +268,7 @@ gimmeSEM <- gimme <- function(data           = NULL,
   prune <- any(lapply(sub_spec, FUN = function(x) x$n_sub_paths != 0) == TRUE)
 
   sub_spec_comb <- do.call(rbind, sub_spec)
-  ind           <- merge(sub$sub_mem, sub_spec_comb, "membership", all.x = TRUE)
+  ind           <- merge(sub$sub_mem, sub_spec_comb, "sub_membership", all.x = TRUE)
   ind           <- ind[order(ind$index),]
   ind$sub_paths[is.na(ind$sub_paths)] <- ""
   temp_count    <- grp$n_group_paths
@@ -328,7 +328,7 @@ gimmeSEM <- gimme <- function(data           = NULL,
   }
 
   sub_spec_comb <- do.call(rbind, sub_spec)
-  ind           <- merge(sub$sub_mem, sub_spec_comb, "membership", all.x = TRUE)
+  ind           <- merge(sub$sub_mem, sub_spec_comb, "sub_membership", all.x = TRUE)
   ind$sub_paths[is.na(ind$sub_paths)] <- ""
   ind           <- ind[order(ind$index),]
 
@@ -354,11 +354,12 @@ gimmeSEM <- gimme <- function(data           = NULL,
                      sub_spec,
                      store)
 
-  # return object with info user can access
-  # need to add subgroup membership!
+  # these objects are used in print.gimmep
+  # if you change an object name here, 
+  # you need to change it in the print.gimmep.R
   res <- list(path_est_mats   = store$betas,
               varnames        = dat$varnames,
-              nvars           = dat$n_rois,
+              n_rois          = dat$n_rois,
               fit             = final$fit,
               path_se_est     = final$param_est,
               plots           = store$plots,
