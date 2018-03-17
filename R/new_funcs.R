@@ -370,7 +370,7 @@ search.paths <- function(base_syntax,
           writeLines(paste("subgroup-level search, subject", k))
         }
       } else 
-        {
+      {
         fit        <- fit.model(syntax    = c(base_syntax, 
                                               fixed_syntax, 
                                               add_syntax),
@@ -466,12 +466,15 @@ determine.subgroups <- function(data_list,
   sim_mi <- matrix(0, ncol = length(mi_list), nrow = length(mi_list))
   sim_z  <- sim_mi
   
+  # added by stl march 2018 because some paths for some individuals contained
+  # NA standard errors. this caused trouble downstream.
+  
   for (i in 1:length(mi_list)){
     for (j in 1:length(mi_list)){
       sim_mi[i,j] <- sum(mi_list[[i]]$sig == 1 & mi_list[[j]]$sig == 1 & 
-                           sign(mi_list[[i]]$epc) == sign(mi_list[[j]]$epc))
+                           sign(mi_list[[i]]$epc) == sign(mi_list[[j]]$epc), na.rm = TRUE)
       sim_z[i,j]  <- sum(z_list[[i]]$sig == 1 & z_list[[j]]$sig == 1 &
-                           sign(z_list[[i]]$z) == sign(z_list[[j]]$z))
+                           sign(z_list[[i]]$z) == sign(z_list[[j]]$z), na.rm = TRUE)
     }
   }
   
@@ -599,9 +602,9 @@ indiv.search <- function(dat, grp, ind){
   if (dat$agg){
     names(status) <- names(fits) <- names(coefs) <- 
       names(betas) <- names(vcov) <- names(plots) <- "all"
-  # } else if (ind$n_ind_paths[k] > 0 & !dat$agg){
-  #   names(status) <- names(fits) <- names(coefs) <- 
-  #     names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
+    # } else if (ind$n_ind_paths[k] > 0 & !dat$agg){
+    #   names(status) <- names(fits) <- names(coefs) <- 
+    #     names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
   } else {
     names(status) <- names(fits) <- names(coefs) <- 
       names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
@@ -649,8 +652,8 @@ get.params <- function(dat, grp, ind, k){
   converge <- lavInspect(fit, "converged")
   # if (ind$n_ind_paths[k] > 0){ commented out on 11.20.17 by stl
   # potentially insert some other check for an empty model
-    zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
-    # } else{ zero_se <- FALSE} commented out on 11.20.17 by stl
+  zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+  # } else{ zero_se <- FALSE} commented out on 11.20.17 by stl
   
   # if no convergence, roll back one path at individual level, try again 
   if (!converge | zero_se){
@@ -675,7 +678,7 @@ get.params <- function(dat, grp, ind, k){
     converge <- lavInspect(fit, "converged")
     ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
     if (length(ind_coefs[,1]) > 0){
-    zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0}
+      zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0}
     else
     {zero_se <- FALSE}
     if (converge){
@@ -697,7 +700,7 @@ get.params <- function(dat, grp, ind, k){
     
     ind_coefs <- subset(standardizedSolution(fit), op == "~")
     
- #   if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
+    #   if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
     ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
     ind_ses   <- round(lavInspect(fit, "se")$beta, digits = 4)
     
@@ -706,7 +709,7 @@ get.params <- function(dat, grp, ind, k){
     
     rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_rois+1):(dat$n_rois*2)]
     colnames(ind_betas) <- colnames(ind_ses) <- dat$varnames[1:(dat$n_rois*2)]
- #   } # stl comment out 11.20.17
+    #   } # stl comment out 11.20.17
     
     if (dat$agg & !is.null(dat$out)){
       write.csv(ind_betas, file.path(dat$out, "allBetas.csv"), 
@@ -775,7 +778,7 @@ get.params <- function(dat, grp, ind, k){
   #   ind_coefs <- subset(standardizedSolution(fit), op == "~")
   #   
   # } 
-
+  
   if (!converge | zero_se){
     if (!converge) status <- "nonconvergence"
     if (zero_se)   status <- "computationally singular"
@@ -827,18 +830,19 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
     coefs       <- do.call("rbind", store$coefs)
     
     if(length(coefs[,1])>0){
-    coefs$id    <- rep(names(store$coefs), sapply(store$coefs, nrow))
-    coefs$param <- paste0(coefs$lhs, coefs$op, coefs$rhs)
-    
-    coefs$level[coefs$param %in% c(grp$group_paths, dat$syntax)] <- "group"
-    coefs$level[coefs$param %in% unique(unlist(ind$ind_paths))]  <- "ind"
-    coefs$color[coefs$level == "group"] <- "black"
-    coefs$color[coefs$level == "ind"]   <- "gray50"}
+      coefs$id    <- rep(names(store$coefs), sapply(store$coefs, nrow))
+      coefs$param <- paste0(coefs$lhs, coefs$op, coefs$rhs)
+      
+      coefs$level[coefs$param %in% c(grp$group_paths, dat$syntax)] <- "group"
+      coefs$level[coefs$param %in% unique(unlist(ind$ind_paths))]  <- "ind"
+      coefs$color[coefs$level == "group"] <- "black"
+      coefs$color[coefs$level == "ind"]   <- "gray50"
+      }
     
     indiv_paths <- NULL
     samp_plot <- NULL
     sample_counts <- NULL
-   # if (length(coefs[,1])>0){ # commented out stl 11.20.17
+    # if (length(coefs[,1])>0){ # commented out stl 11.20.17
     if (dat$subgroup) {
       if (sub$n_subgroups != dat$n_subj){
         
@@ -862,6 +866,12 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
           sub_s_coefs$color[sub_s_coefs$level == "group"] <- "black"
           sub_s_coefs$color[sub_s_coefs$level == "sub"]   <- "green3"
           sub_s_coefs$color[sub_s_coefs$level == "ind"]   <- "gray50"
+          
+          
+          # march 2018 temporary fix to remove error caused where lhs and rhs 
+          # values at some point are NA. just remove these rows
+          sub_s_coefs <- sub_s_coefs[!is.na(sub_s_coefs$lhs), ]
+          sub_s_coefs <- sub_s_coefs[!is.na(sub_s_coefs$rhs), ]
           
           sub_s_summ <- transform(sub_s_coefs, 
                                   count = as.numeric(
@@ -936,9 +946,15 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
         summ <- do.call("rbind", sub_summ)
         coefs <- do.call("rbind", sub_coefs)
         
-      } 
-    }
-    else {
+      } else {
+        sub_coefs <- NULL
+        sub_plots <- NULL
+        sub_paths <- NULL
+        summ <- transform(coefs, count = as.numeric(
+          ave(param, param, FUN = length)))
+        summ <- subset(summ, !duplicated(param)) 
+      }
+    } else {
       sub_coefs <- NULL
       sub_plots <- NULL
       sub_paths <- NULL
@@ -965,7 +981,7 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
       write.csv(a, file.path(dat$out, "summaryPathCounts.csv"), 
                 row.names = FALSE)
     }
-  
+    
     # end creating wide summaryPathCounts ------------------------------------ #
     
     b <- aggregate(count ~ lhs + rhs + color + label + param, data = summ, sum)
@@ -1031,7 +1047,7 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
     indiv_paths     <- indiv_paths[order(indiv_paths$id, indiv_paths$level), ]
     colnames(indiv_paths) <- c("file", "dv", "iv", "beta", "se", 
                                "z", "pval", "level")
-   # } # end "if no coefficients" commented out stl 11.20.17
+    # } # end "if no coefficients" commented out stl 11.20.17
     # combine fit information for summaryFit.csv
     
     fits        <- as.data.frame(do.call(rbind, store$fits))
