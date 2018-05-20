@@ -16,6 +16,61 @@ recode.vars <- function(data,
   newvec
 }
 
+#' Estimate response function for each person using smoothed Finite Impulse Response.
+#' @param data The data to be used to estimate response function 
+#' @param stimuli A vector containing '0' when the stimuli of interest is not present 
+#' and '1' otherwise. Number of observations across time must equal the length of data. 
+#' @param interval Time between observations; for fMRI this is the repetition time. 
+#' Defaults to 1.
+#' @return Shape of response function and convolved time series vector. 
+#' @keywords internal 
+sFIR <- function(data, 
+                 stimuli, 
+                 response_length = 16, 
+                 interval = 1){
+  
+  run_length <- length(stimuli)
+  t = seq(from = 1, to = response_length, by =interval)
+  
+  X_fir <- matrix(0, run_length, (response_length/interval))
+  
+  # set up basis vectors
+  c_onsets <- which(stimuli == 1)
+  id_cols <- seq(from=1, to = response_length/interval)
+  for (j in 1: length(c_onsets)){
+   id_rows <- seq(from =c_onsets[j], to= (c_onsets[j]+response_length/interval-1))
+  for (k in 1:length(id_rows))
+    X_fir[id_rows[k], id_cols[k]]<- 1
+  }
+  
+  ### estimate beta 
+  # get R2s to select which vector to use
+  R2 <- matrix(,length(data[1,]), 1)
+  for (p in 1:length(data[1,]))
+    R2[p]<- summary(lm(data[,p]~X_fir))$r.squared
+  best <- which(R2 == max(R2))
+  
+  ### For smoothing
+  C <- seq(1:length(t))%*%matrix(1, 1, length(t))
+  h <- sqrt(1/(7/interval))
+  
+  C2 <- apply((C-t(C)), c(1,2), function(i) i^2)
+  RI <- solve(.1*exp(-h/2*(C2)))
+  # MRI <- matrix(0,1, n_cond*length(t)+1)
+  MRI <- matrix(0,length(t),length(t))
+    MRI[1:length(t),1:length(t)] = RI
+  ## end smooth 
+  
+  est_hrf <- solve(t(X_fir)%*%X_fir + 1^2*MRI)%*%t(X_fir)%*%data[,best]
+  #plot(ts(est_hrf))
+  conv_onsets <- convolve(as.numeric(stimuli), rev(est_hrf), type = c("open"))
+  
+  res <- list(est_rf = est_hrf, 
+              conv_stim_onsets = conv_onsets)
+  return(res)
+}
+
+  
 #' Create edge list from weight matrix.
 #' @param x The coefficient matrix from an individual
 #' @return A list of all non-zero edges to feed to qgraph
@@ -37,8 +92,8 @@ fit.model <- function (syntax,
                                  model.type      = "sem",
                                  missing         = "fiml",
                                  estimator       = "ml",
-                                 int.ov.free     = TRUE,
-                                 int.lv.free     = FALSE,
+                                 int.ov.free     = FALSE,
+                                 int.lv.free     = TRUE,
                                  auto.fix.first  = TRUE,
                                  auto.var        = TRUE,
                                  auto.cov.lv.x   = TRUE,
@@ -370,7 +425,7 @@ search.paths <- function(base_syntax,
           writeLines(paste("subgroup-level search, subject", k))
         }
       } else 
-      {
+        {
         fit        <- fit.model(syntax    = c(base_syntax, 
                                               fixed_syntax, 
                                               add_syntax),
@@ -427,7 +482,8 @@ determine.subgroups <- function(data_list,
                                 file_order,
                                 elig_paths,
                                 confirm_subgroup, 
-                                out_path = NULL){
+                                out_path = NULL,
+                                sub_feature = sub_feature){
   
   sub_membership  = NULL # appease CRAN check
   
@@ -445,7 +501,9 @@ determine.subgroups <- function(data_list,
   
   names(z_list) <- names(mi_list) <- names(data_list)
   
+  # drop individuals who did not converge
   drop    <- unique(c(which(is.na(z_list)), which(is.na(mi_list))))
+  
   if (length(drop) != 0){
     mi_list <- mi_list[-drop]
     z_list  <- z_list[-drop]
@@ -459,15 +517,44 @@ determine.subgroups <- function(data_list,
   mi_list <- lapply(mi_list_temp, 
                     function(x){subset(x, x$param %in% elig_paths)})
   
+
   z_list <- lapply(z_list, 
                    function(x){x$sig <- ifelse(x$p < .05/n_subj, 1, 0)
                    return(x)})
   
+  #subgroup based only on contemporaneous paths kmg
+  if(sub_feature == "contemp"){
+    mi_list <- lapply(mi_list, 
+                      function(x){x[-grep('lag',mi_list[[1]]$rhs),]})
+    z_list <- lapply(z_list, 
+                     function(x){x[-grep('lag',z_list[[1]]$rhs),]})
+  }
+  
+  #subgroup based only on lagged paths kmg
+  if(sub_feature == "lagged"){
+    mi_list <- lapply(mi_list, 
+                      function(x){x[grep('lag',mi_list[[1]]$rhs),]})
+    z_list <- lapply(z_list, 
+                     function(x){x[grep('lag',z_list[[1]]$rhs),]})
+  }
+  
+  # remove lines that have "NA" from z_list (occurs for exog and ar=FALSE)
+  # commented out by stl april 2018 - likely to have unintended consequences
+  # because it will cause off-by-one errors in the creation of the similarity matrix
+  # these NA issues should instead by captured in the na.rm = T arguments
+  # added to the similarity matrix. if not, we can revisit
+  # z_list <- lapply(z_list, na.exclude) 
+  
   sim_mi <- matrix(0, ncol = length(mi_list), nrow = length(mi_list))
   sim_z  <- sim_mi
   
-  # added by stl march 2018 because some paths for some individuals contained
-  # NA standard errors. this caused trouble downstream.
+  ## march 2018 stl - na.rm = TRUE added in creation of similarity matrix. 
+  ## This was added to address cases where the standard errors for certain paths,
+  ## particularly bidirectional paths, were NA. This caused NAs throughout
+  ## the adjacency matrix. We should consider whether this is the permanent 
+  ## solution we want, as it means that individuals contribute different numbers
+  ## of paths to the adjacency matrix (i.e., those individuals with paths
+  ## that have NA standard errors contribute fewer paths to the matrix)
   
   for (i in 1:length(mi_list)){
     for (j in 1:length(mi_list)){
@@ -490,6 +577,7 @@ determine.subgroups <- function(data_list,
     sub$sim         <- sim
     sub$n_subgroups <- length(unique(na.omit(sub_mem$sub_membership))) 
     sub$modularity  <- modularity(res)
+
     sub$sub_mem     <- merge(file_order, sub_mem, by = "names", all.x = TRUE)
   } else {
     sub_mem         <- confirm_subgroup
@@ -602,9 +690,9 @@ indiv.search <- function(dat, grp, ind){
   if (dat$agg){
     names(status) <- names(fits) <- names(coefs) <- 
       names(betas) <- names(vcov) <- names(plots) <- "all"
-    # } else if (ind$n_ind_paths[k] > 0 & !dat$agg){
-    #   names(status) <- names(fits) <- names(coefs) <- 
-    #     names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
+  # } else if (ind$n_ind_paths[k] > 0 & !dat$agg){
+  #   names(status) <- names(fits) <- names(coefs) <- 
+  #     names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
   } else {
     names(status) <- names(fits) <- names(coefs) <- 
       names(betas) <- names(vcov) <- names(plots) <- names(dat$ts_list)
@@ -700,16 +788,16 @@ get.params <- function(dat, grp, ind, k){
     
     ind_coefs <- subset(standardizedSolution(fit), op == "~")
     
-    #   if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
-    ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
-    ind_ses   <- round(lavInspect(fit, "se")$beta, digits = 4)
-    
-    ind_betas <- ind_betas[(dat$n_rois+1):(dat$n_rois*2), ]
-    ind_ses   <- ind_ses[(dat$n_rois+1):(dat$n_rois*2), ]
-    
-    rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_rois+1):(dat$n_rois*2)]
-    colnames(ind_betas) <- colnames(ind_ses) <- dat$varnames[1:(dat$n_rois*2)]
-    #   } # stl comment out 11.20.17
+   # if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
+      ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
+      ind_ses   <- round(lavInspect(fit, "se")$beta, digits = 4)
+      
+      ind_betas <- ind_betas[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog), ]
+      ind_ses   <- ind_ses[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog), ]
+      
+      rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog)]
+      colnames(ind_betas) <- colnames(ind_ses) <- dat$varnames
+ #   } # stl comment out 11.20.17 
     
     if (dat$agg & !is.null(dat$out)){
       write.csv(ind_betas, file.path(dat$out, "allBetas.csv"), 
@@ -728,8 +816,8 @@ get.params <- function(dat, grp, ind, k){
     ind_plot  <- NA
     if (dat$plot){
       ind_betas_t <- t(ind_betas)
-      lagged      <- ind_betas_t[1:dat$n_rois, ]
-      contemp     <- ind_betas_t[(dat$n_rois+1):(dat$n_rois*2), ]
+      lagged      <- ind_betas_t[1:dat$n_lagged, ]
+      contemp     <- ind_betas_t[(dat$n_lagged+1):(dat$n_lagged+dat$n_endog), ]
       plot_vals   <- rbind(w2e(lagged), w2e(contemp))
       is_lagged   <- c(rep(TRUE, sum(lagged != 0)), 
                        rep(FALSE, sum(contemp != 0)))
@@ -749,7 +837,7 @@ get.params <- function(dat, grp, ind, k){
                                   posCol       = "red",
                                   negCol       = "blue",
                                   labels       = 
-                                    dat$varnames[(dat$n_rois+1):(dat$n_rois*2)],
+                                    dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)],
                                   label.cex    = 2,
                                   DoNotPlot    = TRUE), 
                            error = function(e) e)
@@ -832,19 +920,19 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
     if(length(coefs[,1])>0){
       coefs$id    <- rep(names(store$coefs), sapply(store$coefs, nrow))
       coefs$param <- paste0(coefs$lhs, coefs$op, coefs$rhs)
+      coefs <- coefs[!coefs$param %in% dat$nonsense_paths,] # Removes non-sense paths that occur when ar = FALSE or mult_vars is not null from output 
       
       coefs$level[coefs$param %in% c(grp$group_paths, dat$syntax)] <- "group"
       coefs$level[coefs$param %in% unique(unlist(ind$ind_paths))]  <- "ind"
       coefs$color[coefs$level == "group"] <- "black"
-      coefs$color[coefs$level == "ind"]   <- "gray50"
-      }
+      coefs$color[coefs$level == "ind"]   <- "gray50"}
     
     indiv_paths <- NULL
     samp_plot <- NULL
     sample_counts <- NULL
     # if (length(coefs[,1])>0){ # commented out stl 11.20.17
     if (dat$subgroup) {
-      if (sub$n_subgroups != dat$n_subj){
+      if (sub$n_subgroups != dat$n_subj){ # ensure everyone isn't in their own subgroup
         
         sub_paths_count <- table(unlist(
           lapply(sub_spec, FUN = function(x) c(x$sub_paths))))
@@ -852,11 +940,11 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
           sub_paths_count[sub_paths_count == sub$n_subgroups])
         
         for (s in 1:sub$n_subgroups){
-          sub_s_mat_counts <- matrix(0, nrow = (dat$n_rois*2), 
-                                     ncol = (dat$n_rois*2))
+          sub_s_mat_counts <- matrix(0, nrow = (dat$n_vars_total), 
+                                     ncol = (dat$n_vars_total))
           sub_s_mat_means  <- sub_s_mat_counts
-          sub_s_mat_colors <- matrix(NA, nrow = (dat$n_rois*2), 
-                                     ncol = (dat$n_rois*2))
+          sub_s_mat_colors <- matrix(NA, nrow = (dat$n_vars_total), 
+                                     ncol = (dat$n_vars_total))
           
           sub_s_coefs <- coefs[coefs$id %in% sub_spec[[s]]$sub_s_subjids, ]
           sub_s_coefs$level[sub_s_coefs$param %in% sub_spec[[s]]$sub_paths] <- "sub"
@@ -867,9 +955,10 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
           sub_s_coefs$color[sub_s_coefs$level == "sub"]   <- "green3"
           sub_s_coefs$color[sub_s_coefs$level == "ind"]   <- "gray50"
           
-          
-          # march 2018 temporary fix to remove error caused where lhs and rhs 
-          # values at some point are NA. just remove these rows
+          ## march 2018 stl - fix to remove error caused where lhs and rhs 
+          ## values are NA. there's no deeper trouble here - it was just due to an 
+          ## rbind where individuals with no paths (e.g., entirely NA) were included
+          ## in the full rbind, which led to variable names of "NA" 
           sub_s_coefs <- sub_s_coefs[!is.na(sub_s_coefs$lhs), ]
           sub_s_coefs <- sub_s_coefs[!is.na(sub_s_coefs$rhs), ]
           
@@ -884,25 +973,25 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
           
           sub_s_mat_counts[cbind(sub_s_summ$row, sub_s_summ$col)] <- 
             as.numeric(as.character(sub_s_summ$count))
-          sub_s_mat_counts <- sub_s_mat_counts[(dat$n_rois+1):(dat$n_rois*2), ]
+          sub_s_mat_counts <- sub_s_mat_counts[(dat$n_lagged+1):(dat$n_vars_total), ]
           colnames(sub_s_mat_counts) <- dat$varnames
-          rownames(sub_s_mat_counts) <- dat$varnames[(dat$n_rois+1):(dat$n_rois*2)]
+          rownames(sub_s_mat_counts) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
           
           sub_s_mat_means[cbind(sub_s_summ$row, sub_s_summ$col)]  <- sub_s_summ$mean
           sub_s_mat_colors[cbind(sub_s_summ$row, sub_s_summ$col)] <- sub_s_summ$color
-          sub_s_mat_colors <- sub_s_mat_colors[(dat$n_rois+1):(dat$n_rois*2), ]
+          sub_s_mat_colors <- sub_s_mat_colors[(dat$n_lagged+1):(dat$n_vars_total), ]
           
-          if (dat$plot & sub_spec[[s]]$n_sub_subj != 1){
+          if (dat$plot & sub_spec[[s]]$n_sub_subj != 1){ #plot subgroup plot if >1 nodes in subgroup
             
             sub_s_counts <- t(sub_s_mat_counts/sub_spec[[s]]$n_sub_subj)
-            lagged     <- sub_s_counts[1:(dat$n_rois), ]
-            contemp    <- sub_s_counts[(dat$n_rois+1):(dat$n_rois*2), ]
+            lagged     <- sub_s_counts[1:(dat$n_lagged), ]
+            contemp    <- sub_s_counts[(dat$n_lagged+1):(dat$n_vars_total), ]
             plot_vals  <- rbind(w2e(lagged), w2e(contemp))
             is_lagged  <- c(rep(TRUE, sum(lagged != 0)), rep(FALSE, sum(contemp != 0)))
             
             sub_colors <- t(sub_s_mat_colors)
-            colors     <- c(sub_colors[1:(dat$n_rois), ],
-                            sub_colors[(dat$n_rois+1):(dat$n_rois*2), ])
+            colors     <- c(sub_colors[1:(dat$n_lagged), ],
+                            sub_colors[(dat$n_lagged+1):(dat$n_vars_total), ])
             colors     <- colors[!is.na(colors)]
             
             sub_plot <- tryCatch(qgraph(plot_vals,
@@ -913,7 +1002,7 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
                                         parallelEdge = TRUE,
                                         fade         = FALSE,
                                         labels       = 
-                                          dat$varnames[(dat$n_rois+1):(dat$n_rois*2)],
+                                          dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)],
                                         label.cex    = 2,
                                         DoNotPlot    = TRUE), 
                                  error = function(e) e)
@@ -954,7 +1043,8 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
           ave(param, param, FUN = length)))
         summ <- subset(summ, !duplicated(param)) 
       }
-    } else {
+    }
+    else {
       sub_coefs <- NULL
       sub_plots <- NULL
       sub_paths <- NULL
@@ -993,30 +1083,30 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
     b <- b[order(-b$count), ]
     c <- b[!duplicated(b$param), c("lhs", "rhs", "color", "xcount")] 
     
-    c$row <- match(c$lhs, dat$lvarnames) - dat$n_rois 
+    c$row <- match(c$lhs, dat$lvarnames) - dat$n_lagged
     c$col <- match(c$rhs, dat$lvarnames)
     
-    sample_counts <- matrix(0, ncol = (dat$n_rois*2), nrow = dat$n_rois)
+    sample_counts <- matrix(0, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total - dat$n_lagged))
     sample_counts[cbind(c$row, c$col)] <- c$xcount
     colnames(sample_counts) <- dat$varnames
-    rownames(sample_counts) <- dat$varnames[(dat$n_rois+1):(dat$n_rois*2)]
+    rownames(sample_counts) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
     
     if (dat$plot){
       
-      sample_colors <- matrix(NA, ncol = (dat$n_rois*2), nrow = dat$n_rois)
+      sample_colors <- matrix(NA, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total-dat$n_lagged))
       sample_colors[cbind(c$row, c$col)] <- c$color
       
       sample_paths  <- t(sample_counts)/dat$n_subj
       
-      lagged     <- sample_paths[1:(dat$n_rois), ]
-      contemp    <- sample_paths[(dat$n_rois+1):(dat$n_rois*2), ]
+      lagged     <- sample_paths[1:(dat$n_lagged), ]
+      contemp    <- sample_paths[(dat$n_lagged+1):(dat$n_vars_total), ]
       plot_vals  <- rbind(w2e(lagged), w2e(contemp))
       is_lagged  <- c(rep(TRUE, sum(lagged != 0)),
                       rep(FALSE, sum(contemp != 0)))
       
       samp_colors <- t(sample_colors)
-      colors      <- c(samp_colors[1:(dat$n_rois), ],
-                       samp_colors[(dat$n_rois+1):(dat$n_rois*2), ])
+      colors      <- c(samp_colors[1:(dat$n_lagged), ],
+                       samp_colors[(dat$n_lagged+1):(dat$n_vars_total), ])
       colors      <- colors[!is.na(colors)]
       
       samp_plot <- tryCatch(qgraph(plot_vals,
@@ -1027,7 +1117,7 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
                                    parallelEdge = TRUE,
                                    fade         = FALSE,
                                    labels       = 
-                                     dat$varnames[(dat$n_rois+1):(dat$n_rois*2)],
+                                     dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)],
                                    label.cex    = 2,
                                    DoNotPlot    = TRUE), 
                             error = function(e) e)
@@ -1110,3 +1200,4 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
   return(res)
   
 }
+
