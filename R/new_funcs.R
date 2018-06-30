@@ -39,7 +39,7 @@ sFIR <- function(data,
   id_cols <- seq(from=1, to = response_length/interval)
   for (j in 1: length(c_onsets)){
    id_rows <- seq(from =c_onsets[j], to= (c_onsets[j]+response_length/interval-1))
-  for (k in 1:length(id_rows))
+  for (k in 1:min(length(id_rows),(length(X_fir[,1])-c_onsets[j])))
     X_fir[id_rows[k], id_cols[k]]<- 1
   }
   
@@ -233,9 +233,16 @@ return.zs <- function(fit){
   
   op  = NULL # appease CRAN check
   
-  converge <- lavInspect(fit, "converged")
   error   <- any(grepl("error", class(fit)))
-  zero_se <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+  
+  if (!error) {
+    converge <- lavInspect(fit, "converged")
+    zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+  } else {
+    converge <- FALSE
+    zero_se <- TRUE
+  }
+
   if (!error & !zero_se & converge){
     zs <- tryCatch(subset(standardizedSolution(fit), 
                           op == "~"),
@@ -737,11 +744,16 @@ get.params <- function(dat, grp, ind, k){
                                           ind$ind_paths[[k]]), 
                             data_file = data_file)
   }
-  converge <- lavInspect(fit, "converged")
-  # if (ind$n_ind_paths[k] > 0){ commented out on 11.20.17 by stl
-  # potentially insert some other check for an empty model
-  zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
-  # } else{ zero_se <- FALSE} commented out on 11.20.17 by stl
+  
+  error   <- any(grepl("error", class(fit)))
+  
+  if (!error) {
+    converge <- lavInspect(fit, "converged")
+    zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+  } else {
+    converge <- FALSE
+    zero_se  <- TRUE
+  }
   
   # if no convergence, roll back one path at individual level, try again 
   if (!converge | zero_se){
@@ -763,14 +775,23 @@ get.params <- function(dat, grp, ind, k){
                                 data_file = data_file)
       }
     }
-    converge <- lavInspect(fit, "converged")
-    ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
-    if (length(ind_coefs[,1]) > 0){
-      zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0}
-    else
-    {zero_se <- FALSE}
-    if (converge){
-      status <- "last known convergence"
+    
+    error   <- any(grepl("error", class(fit)))
+    
+    if (!error){
+      converge  <- lavInspect(fit, "converged")
+      ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
+      if (length(ind_coefs[,1]) > 0){
+        zero_se   <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+      } else {
+        zero_se <- FALSE
+      }
+      if (converge){
+        status <- "last known convergence"
+      }
+    } else {
+      converge <- FALSE
+      zero_se  <- TRUE
     }
   }
   
@@ -792,10 +813,10 @@ get.params <- function(dat, grp, ind, k){
       ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
       ind_ses   <- round(lavInspect(fit, "se")$beta, digits = 4)
       
-      ind_betas <- ind_betas[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog), ]
-      ind_ses   <- ind_ses[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog), ]
+      ind_betas <- ind_betas[(dat$n_lagged+1):(dat$n_vars_total), ]
+      ind_ses   <- ind_ses[(dat$n_lagged+1):(dat$n_vars_total), ]
       
-      rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_lagged+1):(dat$n_lagged + dat$n_endog)]
+      rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
       colnames(ind_betas) <- colnames(ind_ses) <- dat$varnames
  #   } # stl comment out 11.20.17 
     
@@ -817,7 +838,7 @@ get.params <- function(dat, grp, ind, k){
     if (dat$plot){
       ind_betas_t <- t(ind_betas)
       lagged      <- ind_betas_t[1:dat$n_lagged, ]
-      contemp     <- ind_betas_t[(dat$n_lagged+1):(dat$n_lagged+dat$n_endog), ]
+      contemp     <- ind_betas_t[(dat$n_lagged+1):(dat$n_vars_total), ]
       plot_vals   <- rbind(w2e(lagged), w2e(contemp))
       is_lagged   <- c(rep(TRUE, sum(lagged != 0)), 
                        rep(FALSE, sum(contemp != 0)))
