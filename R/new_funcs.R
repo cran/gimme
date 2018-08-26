@@ -350,9 +350,9 @@ prune.paths <- function(base_syntax,
                                    data_file = data_list[[k]]) 
         } 
         if (subgroup_stage){
-          writeLines(paste("subgroup-level pruning, subject", k))
+          writeLines(paste0("subgroup-level pruning, subject ", k, " (",names(data_list)[k],")"))
         } else {
-          writeLines(paste("group-level pruning, subject", k))
+          writeLines(paste0("group-level pruning, subject ", k, " (",names(data_list)[k],")"))
         }
       } else{
         fit         <- fit.model(syntax    = c(base_syntax, 
@@ -426,20 +426,25 @@ search.paths <- function(base_syntax,
                                               fixed_syntax, 
                                               add_syntax),
                                 data_file = data_list[[k]])
+        
+        # zf 2018/07/13: added filenames to output 
         if(!subgroup_stage){
-          writeLines(paste("group-level search, subject", k))
+          writeLines(paste0("group-level search, subject ", k, " (",names(data_list)[k],")"))
         } else {
-          writeLines(paste("subgroup-level search, subject", k))
+          writeLines(paste0("subgroup-level search, subject ", k, " (",names(data_list)[k],")"))
         }
-      } else 
-        {
+      } else {
         fit        <- fit.model(syntax    = c(base_syntax, 
                                               fixed_syntax, 
                                               add_syntax),
                                 data_file = data_list)
-        if (!"error" %in% class(fit) & lavInspect(fit, "converged")){
-          indices    <- fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea", 
-                                           "srmr", "nnfi", "cfi"))
+        if (!"error" %in% class(fit)){
+          # stl 2018/08/16 separated convergence check from error check
+          # can't inspect convergence of an error object
+          if (lavInspect(fit, "converged")){ 
+            indices    <- fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea", 
+                                             "srmr", "nnfi", "cfi"))
+          } else indices <- NULL
         } else indices <- NULL
       }
       mi_list[[k]] <- return.mis(fit)
@@ -499,7 +504,7 @@ determine.subgroups <- function(data_list,
   mi_list <- list()
   
   for (k in 1:n_subj){
-    writeLines(paste("subgroup search, subject", k))
+    writeLines(paste0("subgroup search, subject ", k, " (",names(data_list)[k],")"))
     fit          <- fit.model(syntax    = base_syntax,
                               data_file = data_list[[k]])
     z_list[[k]]  <- return.zs(fit)
@@ -639,7 +644,7 @@ indiv.search <- function(dat, grp, ind){
     }
     
     if (!dat$agg){
-      writeLines(paste("individual-level search, subject", k))
+      writeLines(paste0("individual-level search, subject ", k, " (", names(dat$ts_list)[k],")"))
     }
     
     ind_spec <- search.paths(base_syntax  = dat$syntax, 
@@ -891,9 +896,9 @@ get.params <- function(dat, grp, ind, k){
   if (!converge | zero_se){
     if (!converge) status <- "nonconvergence"
     if (zero_se)   status <- "computationally singular"
-    ind_fit   <- rep(NA, 8)
-    ind_coefs <- matrix(NA, nrow = 1, ncol = 7)
-    colnames(ind_coefs) <- c("lhs", "op", "rhs", "est.std", "se", "z", "pvalue")
+    ind_fit   <- rep(NA, 11)
+    ind_coefs <- matrix(NA, nrow = 1, ncol = 9)
+    colnames(ind_coefs) <- c("lhs", "op", "rhs", "est.std", "se", "z", "pvalue", "ci.lower", "ci.upper")
     ind_betas <- NA
     ind_vcov  <- NA
     ind_plot  <- NA
@@ -1028,7 +1033,7 @@ final.org <- function(dat, grp, ind, sub, sub_spec, store){
                                         DoNotPlot    = TRUE), 
                                  error = function(e) e)
             
-            if (!is.null(dat$out)){
+            if (!is.null(dat$out) & !"error" %in% class(sub_plot)){
               pdf(file.path(dat$subgroup_dir, 
                             paste0("subgroup", s, "Plot.pdf")))
               plot(sub_plot)

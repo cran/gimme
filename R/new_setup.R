@@ -121,8 +121,8 @@ setup <- function (data,
   
   # convolve stimuli vectors
   if(!is.null(conv_vars)){
-     for (t in 1:length(data)) {
-       if(any(is.na(data))){
+     for (t in 1:length(ts_list)) {
+       if(any(is.na(ts_list))){
        stop(paste0("gimme ERROR: Data cannot contain missing values (NAs) when convolving."))
          }    
     for (onsets in 1:length(conv_vars)){
@@ -133,7 +133,7 @@ setup <- function (data,
                           stimuli         = stimuli, 
                           response_length = conv_length, 
                           interval        = conv_interval)
-        ts_list[[t]][,which(colnames(ts_list[[t]]) == conv_vars[onsets])] <- convolved$conv_stim_onsets[1:length(data[[t]][,1])]
+        ts_list[[t]][,which(colnames(ts_list[[t]]) == conv_vars[onsets])] <- convolved$conv_stim_onsets[1:length(ts_list[[t]][,1])]
     }
        }
   }
@@ -434,6 +434,20 @@ setup <- function (data,
     fixed_paths <- fixed_paths[!fixed_paths %in% exog_paths]
     syntax <- syntax[!syntax %in% exog_paths]
     
+    # If multiplied vars are specified, remove prediction of first order effects by multiplied
+    # variables
+    
+    if(!is.null(mult_vars)){
+  vars_to_mult <- strsplit(mult_pairs, "*", fixed = TRUE)
+  vars_to_mult_mat <- unlist(vars_to_mult)
+  lvars_to_mult <- recode.vars(vars_to_mult_mat, varnames, lvarnames)
+  multpaths<-apply(expand.grid(lvars_to_mult[1:length(lvars_to_mult)],
+                                lmult_pairs[1:length(lmult_pairs)]), 1, paste, collapse = "~")
+     candidate_paths <- candidate_paths[!candidate_paths %in% multpaths]
+     fixed_paths <- fixed_paths[!fixed_paths %in% multpaths]
+     syntax <- syntax[!syntax %in% multpaths]
+   }
+    
     # covary all exogenous variables with each other 
    # line5 <- apply(expand.grid.unique(lexogenous, lexogenous, incl.eq = TRUE), 
     #               1, paste, collapse = "~~")
@@ -465,6 +479,8 @@ setup <- function (data,
   } else {
     nonsense_paths_mult <- NULL
   }
+  
+  
   # If ar = FALSE, take the var_lag ~ var_ paths out of the output
   if(!ar){
     nonsense_paths_ar <- paste0(lvarnames[1:n_lagged], "~", lvarnames[(n_lagged+1):(n_lagged + n_lagged)])
