@@ -10,11 +10,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta name="author" content="KM Gates" />
+<meta name="author" content="Lan Luo &amp; Teague Henry" />
 
-<meta name="date" content="2019-02-28" />
 
-<title>Group Iterative Multiple Model Estimation (GIMME)</title>
+<title>CS-GIMME Tutorial</title>
 
 
 
@@ -90,95 +89,35 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 
 
-<h1 class="title toc-ignore">Group Iterative Multiple Model Estimation (GIMME)</h1>
-<h4 class="author"><em>KM Gates</em></h4>
-<h4 class="date"><em>2019-02-28</em></h4>
+<h1 class="title toc-ignore">CS-GIMME Tutorial</h1>
+<h4 class="author"><em>Lan Luo &amp; Teague Henry</em></h4>
+<h4 class="date"><em>November 7, 2018</em></h4>
 
 
 
-<div id="the-basics" class="section level1">
-<h1><strong>The Basics</strong></h1>
-<ul>
-<li><p>GIMME can be used to estimate the unified SEM (uSEM; Kim et al., 2007; Gates et al., 2010).</p></li>
-<li><p>Missing data is not a problem.</p></li>
-<li><p>Heterogeneous data is not a problem:</p>
-<ul>
-<li><p>No “group” or “common” structure will be forced unless it truly describes the majority.</p></li>
-<li><p>Individual-level nuances will surface after a group or common structure is fit (provided one exists).</p></li>
-<li><p>If desired, subgroups of individuals with similar patterns of effects will be generated to aid the researcher in finding similar patterns among the varied individual models.</p></li>
-</ul></li>
-<li><p>Works well with as little as 3 or as many as 20 variables.</p></li>
-<li><p>Can be freely downloaded by installing the package “gimme” in R.</p></li>
-</ul>
-</div>
-<div id="running-gimme" class="section level1">
-<h1><strong>Running GIMME</strong></h1>
-<p><strong>1. Create two new folders (i.e., directories)</strong></p>
-<ul>
-<li><p>Create a source folder for your time series. This can be anywhere that you have permission to read and write.</p></li>
-<li><p>Nothing can be in the source folder other than the time series data.</p></li>
-<li><p>Create an output folder for your results. This must be different from the above folder.</p></li>
-</ul>
-<p><strong>2. Extract the time series for your variables</strong></p>
-<ul>
-<li><p>Have each variable be a column, with the rows being the observation (e.g., scan in fMRI or a day in daily diary studies).</p></li>
-<li><p>Substitute NA for missing values.</p></li>
-<li><p>Have a separate file for each individual/session.</p></li>
-<li><p>Put each file in the source folder you created in step 1. Do not put anything else in this folder.</p></li>
-<li><p>Files must be either comma, space, or tab delimited.</p></li>
-</ul>
-<p><strong>3. Installing gimme with R</strong></p>
-<ul>
-<li><p>Open an R script and enter into the console: <code>install.packages(&quot;gimme&quot;)</code></p></li>
-<li><p>Once gimme has been installed, you will need to load the package by entering: <code>library(gimme)</code></p></li>
-</ul>
-<p><strong>4. Running gimme</strong> The <em>gimme</em> (or equivelantly, <em>gimmeSEM</em>) function requires that you input: 1. Source directory 2. How data are separated (e..g, comma-separated values) 3. If there is a header</p>
-<p>All other fields are optional and will go to defaults if no user input is provided. If no output directory is indicated, all information is stored as R objects (see tutorial linked above for details).</p>
+<div id="cs-gimme" class="section level2">
+<h2>CS-GIMME</h2>
+<p>Confirmatory Subgroup GIMME enables researches to conduct GIMME both on the entire group as well as within predefined (e.g., observed) subgroups, such as clinical populations or biological sex. This allows for researchers to identify aspects of dynamic processes that are shared across the subgroups (i.e., group-level paths) as well as how the subgroups differ (i.e., subgroup-level paths). This document is a brief tutorial on using CS-GIMME, and contains several functions for extracting significantly different group paths. For a tutorial for the GIMME algorithm in general, see <a href="http://gimme.web.unc.edu/63-2/" class="uri">http://gimme.web.unc.edu/63-2/</a>.</p>
+<p>A sample dataset can be found at <a href="https://github.com/kgates/gimme/blob/master/Example%20Data.zip">https://github.com/kgates/gimme/blob/master/Example%20Data.zip</a>. In this dataset, each separate file is for each individual/session, each variable is a column and the rows are the observations. Following setting up the GIMME directories and organizing one’s variable timeseries, to use CS-GIMME, one needs to create an additional data frame that contains the subgroup information. This data frame must contain two columns. The first column contains the names of each subject variable timeseries file, sans extension. For example, for our sample dataset, the first time series file is labeled ‘group_1_1.txt’, the correct labeling in the data frame would be ‘group_1_1’. The second column contains integer valued subgroup labels. A dataframe that contains the subgroup information for our sample dataset can be made using the following code:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;tools&quot;</span>) <span class="co">#to use the function to get file names sans extension</span>
+<span class="co">#get filenames in the folder without extension</span>
+filename &lt;-<span class="st"> </span><span class="kw">file_path_sans_ext</span>(<span class="kw">list.files</span>(<span class="dt">path =</span> <span class="st">&quot;t_120_n_25_v_5&quot;</span>, <span class="dt">full.names =</span> <span class="ot">FALSE</span>)) 
+subgroup &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>) <span class="co">#create the subgroup</span>
+confirm_dataframe &lt;-<span class="st"> </span><span class="kw">data.frame</span>(filename, subgroup)              <span class="co">#create the dataframe</span></code></pre></div>
+<p>When running CS-GIMME, this source folder should include nothing other than the time series data. The researcher can either specify an output directory (as shown below) or store the output as an object. Once the dataframe is created, CS-GIMME using this sample dataset can be run using the following code:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">gimme</span>(                  <span class="co"># can use &quot;gimme&quot; or &quot;gimmeSEM&quot;</span>
-    <span class="dt">data =</span> <span class="st">''</span>,          <span class="co"># source directory where your data are </span>
-    <span class="dt">out =</span> <span class="st">''</span>,           <span class="co"># output directory where you'd like your output to go</span>
-    <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>,           <span class="co"># how data are separated. &quot;&quot; for space; &quot;,&quot; for comma, &quot;/t&quot; for tab-delimited</span>
-    <span class="dt">header =</span> ,          <span class="co"># TRUE or FALSE, is there a header</span>
+    <span class="dt">data =</span> <span class="st">'t_120_n_25_v_5'</span>,          <span class="co"># source directory where your data are </span>
+    <span class="dt">out =</span> <span class="st">'SampleOutput'</span>,            <span class="co"># output directory where you'd like your output to go</span>
+    <span class="dt">sep =</span> <span class="st">&quot;,&quot;</span>,           <span class="co"># how data are separated. &quot;&quot; for space; &quot;,&quot; for comma, &quot;/t&quot; for tab-delimited</span>
+    <span class="dt">header =</span> <span class="ot">FALSE</span>,          <span class="co"># TRUE or FALSE, is there a header</span>
     <span class="dt">ar =</span> <span class="ot">TRUE</span>,          <span class="co"># TRUE (default) or FALSE, start with autoregressive paths open</span>
     <span class="dt">plot =</span> <span class="ot">TRUE</span>,        <span class="co"># TRUE (default) or FALSE, generate plots</span>
-    <span class="dt">subgroup =</span> <span class="ot">FALSE</span>,   <span class="co"># TRUE or FALSE (default), cluster individuals based on similarities in effects</span>
+    <span class="dt">subgroup =</span> <span class="ot">TRUE</span>,    <span class="co"># Must be TRUE to perform confirmatory subgrouping </span>
+    <span class="dt">confirm_subgroup =</span> confirm_dataframe, <span class="co"># confirm_dataframe is the dataframe constructed previously</span>
     <span class="dt">paths =</span> <span class="ot">NULL</span>,       <span class="co"># option to list paths that will be group-level (semi-confirmatory)</span>
     <span class="dt">groupcutoff =</span> .<span class="dv">75</span>,  <span class="co"># the proportion that is considered the majority at the group level</span>
-    <span class="dt">subcutoff =</span> .<span class="dv">5</span>      <span class="co"># the proportion that is considered the majority at the subgroup level</span>
+    <span class="dt">subcutoff =</span> .<span class="dv">75</span>      <span class="co"># the proportion that is considered the majority at the subgroup level</span>
     )        </code></pre></div>
-<p>While <em>gimme</em> is running you will see information iterate in the command window. The algorithm will tell you when it is finished.</p>
-</div>
-<div id="output" class="section level1">
-<h1><strong>Output</strong></h1>
-<ul>
-<li><p>The output directory will contain:</p>
-<ul>
-<li><p><strong>indivPathEstimates</strong>: Contains estimate, standard error, p-value, and z-value for each path and each individual</p></li>
-<li><p><strong>summaryFit</strong>: Contains model fit information for individual-level models. If subgroups are requested, this file also indicates the subgroup membership for each individual.</p></li>
-<li><p><strong>summaryPathCountMatrix</strong>: Contains counts of total number of paths, both contemporaneous and lagged, estimated for the sample. The row variable is the outcome and the column variable is the predictor variable.</p></li>
-<li><p><strong>summaryPathCounts</strong>: Contains summary count information for paths identified at the group-, subgroup (if subgroup = TRUE), and individual-level.</p></li>
-<li><p><strong>summaryPathPlots</strong>: Produced if plot = TRUE. Contains figure with group, subgroup (if subgroup = TRUE), and individual-level paths for the sample. Black paths are group-level, green paths are subgroup-level, and grey paths are individual-level, where the thickness of the line represents the count.</p></li>
-</ul></li>
-<li><p>The subgroup output directory (if subgroup = TRUE) will contain:</p>
-<ul>
-<li><p><strong>subgroup<em>k</em>PathCounts</strong>: Contains counts of relations among lagged and contemporaneous variables for the <strong>k</strong>th subgroup</p></li>
-<li><p><strong>subgroup<em>k</em>Plot</strong>: Contains plot of group, subgroup, and individual level paths for the <strong>k</strong>th subgroup. Black represents group-level paths, grey represents individual-level paths, and green represents subgroup-level paths.</p></li>
-<li><p><em>Note: if a subgroup of size n = 1 is discovered, subgroup-level output is not produced. Subgroups of size one can be considered outlier cases</em></p></li>
-</ul></li>
-<li><p>In individual output directory (<em>where id represents the original file name for each individual</em>):</p>
-<ul>
-<li><p><strong><em>id</em>Betas</strong>: Contains individual-level estimates of each path for each individual.</p></li>
-<li><p><strong><em>id</em>StdErrors</strong>: Contains individual-level standard errors for each path for each individual.</p></li>
-<li><p><strong><em>id</em>Plot</strong>: Contains individual-level plots. Red paths represent positive weights and blue paths represent negative weights.</p></li>
-</ul></li>
-</ul>
-</div>
-<div id="faq" class="section level1">
-<h1><strong>FAQ</strong></h1>
-<p><strong>How many time points do I need?</strong> This is a difficult question since it will be related to the number of variables you are using. Rules of thumb for any analysis can generally be used: the more the better! Having at lest 100 time points is recommended, but adequate results have been obtained in simulation studies with only T = 60.</p>
-<p><strong>Do all individuals have to have the same number of observations (T)?</strong> No.</p>
-<p><strong>How many people do I need in my sample?</strong> For regular <em>gimmme</em>, reliable results are obtained with as few as 10 participants. Remember that in this context, power to detect effects is determined by the number of time points rather than the number of individuals. Still, having at least 10 individuals helps <em>gimme</em> to detect signal from noise by looking for effects that consistently occur.</p>
-<p><strong>What do I do if I obtain an error?</strong> Do some initial trouble-shooting. 1. Ensure that all of your individuals have the same number of variables (columns) in their data sets. 2. Ensure that all variables have variability (i.e., are not constant). <em>gimme</em> will let you know if this is the case. 3. Ensure your path directories are correct. 4. Ensure that the columns are variables and the rows contain the observations across time. 5. If all this is correct, please email the error you received, code used to run <em>gimme</em>, and the data (we promise not to use it or share it) to: echo <a href="mailto:gimme@unc.edu">gimme@unc.edu</a>.</p>
 </div>
 
 
