@@ -1,3 +1,4 @@
+#' @keywords internal
 setup <- function (data,
                    sep,
                    header,
@@ -125,16 +126,58 @@ setup <- function (data,
     
     # zf: uncomment once changes pushed through final MIIV estimation
     # first let's look for single indicator LVs and extract the raw data:
-    # single_indicator_lvs <- lapply(seq_along(lv_model_all), function(i){
-    #   pt  <- lavaan::lavParTable(lv_model_all[[i]])
-    #   lvs <- unique(pt[pt$op=="=~","lhs"])
-    #   do.call( "cbind",lapply(lvs, function(l){
-    #     if(length(pt[pt$op=="=~" & pt$lhs == l,"rhs"]) == 1){
-    #       keep <- pt[pt$op=="=~" & pt$lhs == l,"rhs"]
-    #       ts_list_obs[[i]][,keep, drop = F]
-    #     }
-    #   }))
-    # })
+    single_indicator_lvs <- lapply(seq_along(lv_model_all), function(i){
+      
+      pt  <- lavaan::lavParTable(lv_model_all[[i]])
+      lvs <- unique(pt[pt$op=="=~","lhs"])
+      
+      lv_list <- list(); cnt <- 1
+               
+       for(l in 1:length(lvs)){
+          if(length(pt[pt$op=="=~" & pt$lhs == lvs[l],"rhs"]) == 1){
+            
+            keep <- pt[pt$op=="=~" & pt$lhs == lvs[l],"rhs"]
+            tmp <- ts_list_obs[[i]][,keep, drop = F]
+            colnames(tmp) <- lvs[l]
+            lv_list[[cnt]] <- tmp
+            cnt <- cnt + 1
+          } 
+       }        
+      
+       do.call( "cbind", lv_list)
+
+    })
+    
+    
+    lv_names <- list()
+    ov_names <- list()
+    
+    for(j in 1:length(lv_model_all)){
+      
+      pt  <- lavaan::lavParTable(lv_model_all[[j]])
+      lvs <- unique(pt[pt$op=="=~","lhs"])
+      
+      for(k in 1:length(lvs)){
+        
+        if(length(pt[pt$op=="=~" & pt$lhs == lvs[k],"rhs"]) == 1){
+          
+          lv_names_v <- lvs[k]
+          ov_names_v <- pt[pt$op=="=~" & pt$lhs == lvs[k],"rhs"]
+          
+          if(length(ov_names_v) > 1){
+            stop(paste0("gimme: internal error processing variable names."))
+          }
+        
+          colnames(ts_list_obs[[j]]) <- gsub(
+            ov_names_v, 
+            lv_names_v, 
+            colnames(ts_list_obs[[j]])
+          )
+          
+        }
+      }
+    }
+
     
     
     # # since these are observed variables every model should have
@@ -153,7 +196,7 @@ setup <- function (data,
         if (length(pt[pt$op=="=~" & pt$lhs == lvs[j],"rhs"]) == 1){
           
           # remove this error once the functionality is pushed through the final MIIV estimation.
-          stop(paste0("gimme ERROR: factors with only one indicator not currently supported."))
+          #stop(paste0("gimme ERROR: factors with only one indicator not currently supported."))
           
         } else if (length(pt[pt$op=="=~" & pt$lhs == lvs[j],"rhs"]) == 2){
           
@@ -207,11 +250,11 @@ setup <- function (data,
     
     # add back in any single indicator lvs
     # zf: uncomment once changes pushed through final MIIV estimation
-    # if(!all(unlist(lapply(single_indicator_lvs,function(x){is.null(x)})))){
-    #   ts_list <- lapply(seq_along(ts_list), function(i){
-    #     cbind(ts_list[[i]], single_indicator_lvs[[i]])
-    #   })   
-    # }
+    if(!all(unlist(lapply(single_indicator_lvs,function(x){is.null(x)})))){
+      ts_list <- lapply(seq_along(ts_list), function(i){
+        cbind(ts_list[[i]], single_indicator_lvs[[i]])
+      })
+    }
 
     names(ts_list) <- names(ts_list_obs)
     
@@ -234,17 +277,22 @@ setup <- function (data,
   #
   #-------------------------------------------------------------#
   
+  ### Distinguish between lagged and contemporaenous exogenous variables
+  exog_con <- exogenous[regexpr("&lag", exogenous)<0]
+  exog_lag <- sub("&lag", "", exogenous[regexpr("&lag", exogenous)>0])
+  exogenous <- c(exog_lag,exog_con)
+  
   orig <- colnames(ts_list[[1]])
   uexo <- unique(exogenous)
   conv <- conv_vars
-  lagg <- paste0(setdiff(orig,unique(uexo, conv)), "lag")
+  lagg <- paste0(setdiff(orig,unique(exog_con, conv)), "lag")
   mult <- setupMultVarNames(mult_vars)
   exog <- unique(c(uexo, mult, lagg))
   endo <- setdiff(orig, exog) # only true if ar = TRUE
   catg <- NULL
   stnd <- if(standardize) setdiff(c(endo,exog), c(catg, conv_vars)) else NULL
   #coln <- c(endo,exog) # future column names of data
-  coln <- c(lagg, endo, uexo, mult)
+  coln <- unique(c(lagg, endo, uexo, mult))
   
 
   varLabels <- list(
@@ -257,7 +305,9 @@ setup <- function (data,
     endo = endo,
     catg = catg,
     stnd = stnd,
-    coln = coln
+    coln = coln,
+    exog_lag = exog_lag,
+    exog_con = exog_con
   )
   
   class(varLabels) <- "varLabels"
@@ -336,6 +386,7 @@ setup <- function (data,
               "agg" = ctrlOpts$agg,
               "n_subj" = length(ts_list),
               "n_lagged" = length(varLabels$lagg),
+              "n_exog_lag" = length(exog_lag),
               "n_exog" = length(varLabels$uexo),
               "n_bilinear" = length(varLabels$mult),
               "n_endog"  = length(varLabels$endo),
@@ -350,6 +401,7 @@ setup <- function (data,
               "ind_dir"   = ctrlOpts$ind_dir,
               "syntax"     = pathList$syntax,
               "candidate_paths" = pathList$candidate.paths,
+              "candidate_corr" = pathList$candidate.corr,
               "fixed_paths"  = pathList$fixed.paths,
               "group_cutoff" = ctrlOpts$groupcutoff,
               "sub_cutoff" = ctrlOpts$subcutoff,

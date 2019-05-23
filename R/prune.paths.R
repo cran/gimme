@@ -87,7 +87,7 @@ prune.paths <- function(base_syntax,
             writeLines(paste0("group-level pruning, subject ", k, " (",names(data_list)[k],")"))
             
           }
-        
+          
         }
         
       } else{
@@ -138,7 +138,7 @@ prune.paths <- function(base_syntax,
   # 
   # rmv_syntax <- setdiff(orig_add_syntax, add_syntax)
   # rmv_syntax <- if (length(rmv_syntax)==0) { rmv_syntax <- NA }
-    
+  
   res <- list(
     add_syntax = add_syntax,
     n_paths    = n_paths

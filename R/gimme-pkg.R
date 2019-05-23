@@ -10,12 +10,14 @@
 #'    Michael Hallquist [ctb], \cr
 #'    Hallie Pike [ctb],  \cr
 #'    Cara Arizmendi [ctb], \cr
-#'    Teague Henry [ctb], 
-#'    Kelly Duffy [ctb]
+#'    Teague Henry [ctb], \cr
+#'    Kelly Duffy [ctb], \cr
+#'    Lan Luo [ctb]
 #' }
 #' Maintainer: KM Gates \email{gateskm@email.unc.edu}
 #' @import lavaan 
 #' @import MIIVsem 
+#' @import igraph
 #' @import data.tree
 #' @importFrom grDevices dev.off pdf
 #' @importFrom stats aggregate ave complete.cases qchisq qnorm reshape time cov sd na.omit lm convolve

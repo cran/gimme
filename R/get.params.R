@@ -62,7 +62,14 @@ get.params <- function(dat, grp, ind, k){
     
     if (!error){
       converge  <- lavInspect(fit, "converged")
-      ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
+      
+      ind_coefs0 <- standardizedSolution(fit)
+      ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
+      ind_coefs <- ind_coefs0[ind_coefs0$op == "~" |
+                                ind_coefs_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
+      #ind_coefs <- ind_coefs0[ind_coefs_idx %in% elig_paths,]
+      #commented out by lan 4.11.2019
+      #ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
       if (length(ind_coefs[,1]) > 0){
         zero_se   <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
       } else {
@@ -89,7 +96,12 @@ get.params <- function(dat, grp, ind, k){
     keep          <- rownames(ind_vcov_full) %in% dat$candidate_paths
     ind_vcov      <- ind_vcov_full[keep, keep]
     
-    ind_coefs <- subset(standardizedSolution(fit), op == "~")
+    
+    ind_coefs0 <- standardizedSolution(fit)
+    ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
+    ind_coefs <- ind_coefs0[ind_coefs0$op == "~" |
+                              ind_coefs_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
+    #ind_coefs <- subset(standardizedSolution(fit), op == "~")
     
     # if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
     ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
@@ -104,6 +116,7 @@ get.params <- function(dat, grp, ind, k){
     
     # zf added 2019-01-23
     ind_psi <- round(lavInspect(fit, "std")$psi, digits = 4)
+    ind_psi_unstd <- round(lavInspect(fit, "estimates")$psi, digits = 4)
     
     #rownames(ind_betas) <- rownames(ind_ses) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
     #colnames(ind_betas) <- colnames(ind_ses) <- dat$varnames
@@ -122,6 +135,7 @@ get.params <- function(dat, grp, ind, k){
       
       # zf added 2019-01-23
       write.csv(ind_psi, file.path(dat$out, "allPsi.csv"),row.names = TRUE)
+      write.csv(ind_psi_unstd, file.path(dat$out, "allPsiUnstd.csv"),row.names = TRUE)
       
     } else if (!dat$agg & !is.null(dat$out)) { # & ind$n_ind_paths[k]>0)
       write.csv(ind_betas, file.path(dat$ind_dir, 
@@ -135,6 +149,9 @@ get.params <- function(dat, grp, ind, k){
       write.csv(ind_psi, file.path(dat$ind_dir, 
                                      paste0(dat$file_order[k,2], 
                                             "Psi.csv")), row.names = TRUE)
+      write.csv(ind_psi_unstd, file.path(dat$ind_dir, 
+                                     paste0(dat$file_order[k,2], 
+                                            "PsiUnstd.csv")), row.names = TRUE)
       write.csv(ind_ses, file.path(dat$ind_dir,
                                    paste0(dat$file_order[k,2], 
                                           "StdErrors.csv")), row.names = TRUE)
@@ -204,6 +221,7 @@ get.params <- function(dat, grp, ind, k){
     ind_vcov  <- NA
     ind_plot  <- NA
     ind_psi   <- NA
+    ind_psi_unstd   <- NA
     ind_vcov_full <- NA
   }
   
@@ -215,6 +233,7 @@ get.params <- function(dat, grp, ind, k){
               "ind_coefs" = ind_coefs, 
               "ind_betas" = ind_betas, 
               "ind_psi"   = ind_psi, 
+              "ind_psi_unstd" = ind_psi_unstd, 
               "ind_vcov"  = ind_vcov,
               "ind_vcov_full"  = ind_vcov_full,
               "ind_plot"  = ind_plot,

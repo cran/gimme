@@ -4,14 +4,15 @@
 #' @description This function identifies structural equation models for each
 #' individual that consist of both group-level and individual-level paths.
 #' @usage
-#' gimmeSEM(data        = "",
-#'          out         = "",
-#'          sep         = "",
-#'          header      = ,
+#' gimmeSEM(data        = NULL,
+#'          out         = NULL,
+#'          sep         = NULL,
+#'          header      = NULL,
 #'          ar          = TRUE,
 #'          plot        = TRUE,
 #'          subgroup    = FALSE,
 #'          sub_feature = "lag & contemp",
+#'          sub_method = "Walktrap",
 #'          confirm_subgroup = NULL,
 #'          paths       = NULL,
 #'          exogenous   = NULL,
@@ -27,10 +28,11 @@
 #'          ms_allow         = FALSE,
 #'          ms_tol           = 1e-5,
 #'          lv_model         = NULL, 
+#'          lv_estimator     = "miiv",     
 #'          lv_scores        = "regression",       
-#'          lv_estimator     = "miiv",             
 #'          lv_miiv_scaling  = "first.indicator", 
-#'          lv_final_estimator = "miiv")
+#'          lv_final_estimator = "miiv", 
+#'          hybrid = FALSE)
 #' @param data The path to the directory where the data files are located,
 #' or the name of the list containing each individual's time series. Each file
 #' or matrix must contain one matrix for each individual containing a T (time)
@@ -61,8 +63,10 @@
 #' @param exogenous Vector of variable names to be treated as exogenous (optional).
 #' That is, exogenous variable X can predict Y but cannot be predicted by Y.
 #' If no header is used, then variables should be referred to with V followed
-#' (with no separation) by the column number. If a header is used, variables
-#' should be referred to using variable names. Defaults to NULL.
+#' (with no separation) by the column number.  If a header is used, variables should be referred 
+#' to using variable names. The default for exogenous variables is that lagged effects of the exogenous 
+#' variables are not included in the model search.  If lagged paths are wanted, "&lag" should be added to the end of the variable
+#' name with no separation. Defaults to NULL.
 #' @param conv_vars Vector of variable names to be convolved via smoothed Finite Impulse 
 #' Response (sFIR). Note, conv_vars are not not automatically considered exogenous variables.
 #' To treat conv_vars as exogenous use the exogenous argument. Variables listed in conv_vars 
@@ -107,6 +111,9 @@
 #' "lag & contemp" for lagged and contemporaneous, which is the original method. Can use 
 #' "lagged" or "contemp" to subgroup solely on features related to lagged and contemporaneous 
 #' relations, respectively.
+#' @param sub_method Community detection method used to cluster individuals into subgroups. Options align 
+#' with those available in the igraph package: "Walktrap" (default), "Infomap", "Louvain", "Edge Betweenness", 
+#' "Label Prop", "Fast Greedy", "Leading Eigen", and "Spinglass". 
 #' @param groupcutoff Cutoff value for group-level paths. Defaults to .75,
 #' indicating that a path must be significant across 75\% of individuals to be
 #' included as a group-level path.
@@ -122,14 +129,16 @@
 #' that ms_tol not be greater than the default, especially when standardize=TRUE.     
 #' Defaults to 1e-5.
 #' @param lv_model Invoke latent variable modeling by providing the measurement model syntax here. lavaan
-#' conventions are used for relating observed variables to factors. Defaults to NULL
+#' conventions are used for relating observed variables to factors. Defaults to NULL.
+#' @param lv_estimator Estimator used for factor analysis. Options are "miiv" (default), "pml" (pseudo-ML) or "svd".
 #' @param lv_scores Method used for estimating latent variable scores from parameters obtained from the factor analysis 
-#' when lv_model is not NULL. Options are: "regression" (Default) or bartlett".
-#' @param lv_estimator Estimator used for factor analysis. Options are "miiv" (default) or "pml" (pseudo-ML).
+#' when lv_model is not NULL. Options are: "regression" (Default), "bartlett".
 #' @param lv_miiv_scaling Type of scaling indicator to use when "miiv" selected for lv_estimator. Options are
 #' "first.indicator" (Default; the first observed variable in the measurement equation is used), "group" 
 #' (best one for the group), or "individual" (each individual has the best one for them according to R2). 
 #' @param lv_final_estimator Estimator for final estimations. "miiv" (Default) or "pml" (pseudo-ML). 
+#' @param hybrid Logical. If TRUE, enables hybrid-VAR models where both directed contemporaneous paths and contemporaneous 
+#' covariances among residuals are candidate relations in the search space. Defaults to FALSE.
 #' @details
 #'  In main output directory:
 #'  \itemize{
@@ -212,6 +221,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               plot             = TRUE,
                               subgroup         = FALSE,
                               sub_feature      = "lag & contemp",
+                              sub_method       = "Walktrap",
                               confirm_subgroup = NULL,
                               paths            = NULL,
                               exogenous        = NULL,
@@ -227,12 +237,13 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               ms_allow         = FALSE,
                               ms_tol           = 1e-5,
                               lv_model         = NULL, 
-                              lv_scores        = "regression",       # c("regression", "bartlett")
                               lv_estimator     = "miiv",             # c("miiv", "pml")
+                              lv_scores        = "regression",       # c("regression", "bartlett")
                               lv_miiv_scaling  = "first.indicator",  # c("group", "individual")
-                              lv_final_estimator = "miiv"){          # c("miiv", "pml")
+                              lv_final_estimator = "miiv",
+                              hybrid           = FALSE){          # c("miiv", "pml")
 
- # satisfy CRAN checks
+  # satisfy CRAN checks
   ind     = NULL
   varnames = NULL
   lvarnames = NULL
@@ -254,6 +265,11 @@ gimmeSEM <- gimme <- function(data             = NULL,
                 " We recommend setting ar to FALSE.")
   }
   
+  #Error check for hybrid
+  if(hybrid & !ar){
+    stop(paste0("gimme ERROR: Autoregressive paths have to be open for hybrid-gimme.",
+                " Please ensure that ar=TRUE if hybrid=TRUE."))
+  }
   
    sub_membership = NULL
 
@@ -312,13 +328,19 @@ gimmeSEM <- gimme <- function(data             = NULL,
     "group_paths"   = c()
   )
 
+  if(!hybrid){
+    elig_paths   = dat$candidate_paths
+  } else{
+    elig_paths   = c(dat$candidate_paths, dat$candidate_corr)
+  }
+  
   grp_hist  <- search.paths(
     base_syntax    = dat$syntax,
     fixed_syntax   = NULL,
     add_syntax     = grp$group_paths,
     n_paths        = grp$n_group_paths,
     data_list      = dat$ts_list,
-    elig_paths     = dat$candidate_paths,
+    elig_paths     = elig_paths, 
     prop_cutoff    = dat$group_cutoff,
     n_subj         = dat$n_subj,
     chisq_cutoff   = qchisq(1-.05/dat$n_subj, 1),
@@ -438,7 +460,9 @@ gimmeSEM <- gimme <- function(data             = NULL,
         dat,
         grp[[i]],
         confirm_subgroup,
+        elig_paths,
         sub_feature,
+        sub_method,
         ms_tol   = ms_tol,
         ms_allow = FALSE
       )
@@ -505,13 +529,12 @@ gimmeSEM <- gimme <- function(data             = NULL,
   # If this is classic gimme...
   #-------------------------------------------------------------#
   if(!ms_allow){
-    
-    # individual-level search # ind <- ind[1]; grp <- grp[[1]]
+  
     # 2.19.2019 kmg: ind[1]$ returns NULL for subgroups; changed to ind[[1]] here
     if(subgroup){
-      store <- indiv.search(dat, grp[[1]], ind[[1]])
+      store <- indiv.search(dat, grp[[1]], ind[[1]], hybrid)
     } else {
-      store <- indiv.search(dat, grp[[1]], ind[1])
+      store <- indiv.search(dat, grp[[1]], ind[1], hybrid)
     }
     
     if(!is.null(lv_model)){
@@ -519,12 +542,10 @@ gimmeSEM <- gimme <- function(data             = NULL,
           ts_list_obs = dat$lvgimme$ts_list_obs,
           meas_model  = dat$lvgimme$model_list_dfa,
           lv_model    = lapply(store$syntax, function(x){x[!grepl("0\\*", x)]}),
-          miiv.dir    = file.path(dat$out,"miiv"),
+          miiv.dir    =  if(is.null(dat$out)) NULL else {file.path(dat$out,"miiv")},
           lv_final_estimator = lv_final_estimator
       )
     }
-    
-     
   
     print.gimme(x = sub[[1]],
                 y = subgroup,
@@ -538,9 +559,12 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        diagnos = diagnos,
                        store)
   
-    # these objects are used in print.gimmep
+    # these objects are used in both the print.gimmep and
+    # plot.gimmep convenience functions. 
     # if you change an object name here, 
-    # you need to change it in the print.gimmep.R
+    # please check plot.gimmep and print.gimmep
+    # to ensure compatibility
+    
     res <- list(data            = dat$ts_list,
                 path_est_mats   = store$betas,
                 varnames        = dat$varnames,
@@ -550,13 +574,19 @@ gimmeSEM <- gimme <- function(data             = NULL,
                 fit             = final$fit,
                 path_se_est     = final$param_est,
                 plots           = store$plots,
-                group_plot      = final$samp_plot,
-                sub_plots       = final$sub_plots,
+                group_plot_paths= final$samp_plot,
+                group_plot_cov  = final$samp_plot_cov,
+                sub_plots_paths = final$sub_plots,
+                sub_plots_cov   = final$sub_plots_cov,
                 subgroup        = subgroup,
                 path_counts     = final$sample_counts,
                 path_counts_sub = final$sub_counts,
+                cov_counts      = final$sample_counts_cov,
+                cov_counts_sub  = final$sub_counts_cov,
                 vcov            = store$vcov,
                 vcovfull        = store$vcovfull,
+                psi             = store$psi,
+                psi_unstd       = store$psiunstd,
                 sim_matrix      = sub[[1]]$sim, 
                 syntax          = dat$syntax,
                 lvgimme         = dat$lvgimme

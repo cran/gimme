@@ -15,7 +15,9 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
   sub_coefs  <- list()
   sub_summ   <- list()
   sub_plots  <- list()
+  sub_plots_cov <- list()
   sub_counts <- list()
+  sub_counts_cov <- list()
   
   param  = NULL # appease CRAN check
   est.std = NULL # appease CRAN check
@@ -38,7 +40,9 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     
     indiv_paths <- NULL
     samp_plot <- NULL
+    samp_plot_cov <- NULL
     sample_counts <- NULL
+    sample_counts_corr <- NULL
     # if (length(coefs[,1])>0){ # commented out stl 11.20.17
     if (dat$subgroup) {
       if (sub$n_subgroups != dat$n_subj){ # ensure everyone isn't in their own subgroup
@@ -49,11 +53,16 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
         sub_to_group    <- names(
           sub_paths_count[sub_paths_count == sub$n_subgroups])
         
+        
         for (s in 1:sub$n_subgroups){
           sub_s_mat_counts <- matrix(0, nrow = (dat$n_vars_total), 
                                      ncol = (dat$n_vars_total))
+          sub_s_mat_counts_cov <- sub_s_mat_counts
           sub_s_mat_means  <- sub_s_mat_counts
+          sub_s_mat_means_cov  <- sub_s_mat_counts
           sub_s_mat_colors <- matrix(NA, nrow = (dat$n_vars_total), 
+                                     ncol = (dat$n_vars_total))
+          sub_s_mat_colors_cov <- matrix(NA, nrow = (dat$n_vars_total), 
                                      ncol = (dat$n_vars_total))
           
           sub_s_coefs <- coefs[coefs$id %in% sub_spec[[s]]$sub_s_subjids, ]
@@ -81,22 +90,36 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
           sub_s_summ$col <- match(sub_s_summ$rhs, dat$lvarnames)
           sub_s_summ$mem <- s
           
-          sub_s_mat_counts[cbind(sub_s_summ$row, sub_s_summ$col)] <- 
-            as.numeric(as.character(sub_s_summ$count))
+          regressions <- 
+            sub_s_summ[which(sub_s_summ$op == "~"),]
+          sub_s_mat_counts[cbind(regressions$row, regressions$col)] <- 
+            as.numeric(as.character(regressions$count))
           sub_s_mat_counts <- sub_s_mat_counts[(dat$n_lagged+1):(dat$n_vars_total), ]
           colnames(sub_s_mat_counts) <- dat$varnames
           rownames(sub_s_mat_counts) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
           
-          sub_s_mat_means[cbind(sub_s_summ$row, sub_s_summ$col)]  <- sub_s_summ$mean
-          sub_s_mat_colors[cbind(sub_s_summ$row, sub_s_summ$col)] <- sub_s_summ$color
+          sub_s_mat_means[cbind(regressions$row, regressions$col)]  <- regressions$mean
+          sub_s_mat_colors[cbind(regressions$row, regressions$col)] <- regressions$color
           sub_s_mat_colors <- sub_s_mat_colors[(dat$n_lagged+1):(dat$n_vars_total), ]
+          
+          cov <- 
+            sub_s_summ[(which(sub_s_summ$op == "~~")),]
+          sub_s_mat_counts_cov[cbind(cov$row, cov$col)] <- 
+            as.numeric(as.character(cov$count))
+          sub_s_mat_counts_cov <- sub_s_mat_counts_cov[(dat$n_lagged+1):(dat$n_vars_total), ]
+          colnames(sub_s_mat_counts_cov) <- dat$varnames
+          rownames(sub_s_mat_counts_cov) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
+          
+          sub_s_mat_means_cov[cbind(cov$row, cov$col)]  <- cov$mean
+          sub_s_mat_colors_cov[cbind(cov$row, cov$col)] <- cov$color
+          sub_s_mat_colors_cov <- sub_s_mat_colors_cov[(dat$n_lagged+1):(dat$n_vars_total), ]
           
           if (dat$plot & sub_spec[[s]]$n_sub_subj != 1){ #plot subgroup plot if >1 nodes in subgroup
             
             sub_s_counts <- t(sub_s_mat_counts/sub_spec[[s]]$n_sub_subj)
             lagged     <- sub_s_counts[1:(dat$n_lagged), ]
             if (dat$n_exog_total>0){
-              lagged[,(dat$n_lagged+1):(dat$n_lagged+dat$n_exog_total)] <-0
+              lagged[,(dat$n_lagged+1):(dat$n_lagged+dat$n_exog_total-dat$n_exog_lag)] <-0
             }
             contemp    <- sub_s_counts[(dat$n_lagged+1):(dat$n_vars_total), ]
             plot_vals  <- rbind(w2e(lagged), w2e(contemp))
@@ -120,11 +143,36 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
                                         DoNotPlot    = TRUE), 
                                  error = function(e) e)
             
+            sub_s_counts_cov <- t(sub_s_mat_counts_cov/sub_spec[[s]]$n_sub_subj)
+            contemp_cov    <- sub_s_counts_cov[(dat$n_lagged+1):(dat$n_vars_total), ]
+            plot_vals_cov  <- w2e(contemp_cov)
+            sub_colors_cov <- t(sub_s_mat_colors_cov)
+            colors     <- c(sub_colors_cov[1:(dat$n_lagged), ],
+                            sub_colors_cov[(dat$n_lagged+1):(dat$n_vars_total), ])
+            colors     <- colors[!is.na(colors)]
+            sub_plot_cov <- tryCatch(qgraph(plot_vals_cov,
+                                              layout       = "circle",
+                                              edge.labels  = FALSE,
+                                              edge.color   = colors,
+                                              parallelEdge = TRUE,
+                                              fade         = FALSE,
+                                              arrows       = FALSE,
+                                              labels       = 
+                                                dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)],
+                                              label.cex    = 2,
+                                              DoNotPlot    = TRUE), 
+                                       error = function(e) e)
+            
             if (!is.null(dat$out) & !"error" %in% class(sub_plot)){
               pdf(file.path(dat$subgroup_dir, 
                             paste0("subgroup", s, "Plot.pdf")))
               plot(sub_plot)
               dev.off()
+              if(sum(sub_s_counts_cov)>0){
+              pdf(file.path(dat$subgroup_dir, 
+                            paste0("subgroup", s, "Plot_cov.pdf")))
+              plot(sub_plot_cov)
+              dev.off()}
             }
             
           } else {
@@ -142,7 +190,9 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
           sub_coefs[[s]] <- sub_s_coefs
           sub_summ[[s]]  <- sub_s_summ
           sub_plots[[s]] <- sub_plot
+          sub_plots_cov[[s]] <- sub_plot_cov
           sub_counts[[s]] <- sub_s_mat_counts
+          sub_counts_cov[[s]] <- sub_s_mat_counts_cov
         }
         
         summ <- do.call("rbind", sub_summ)
@@ -152,6 +202,8 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
         sub_coefs <- NULL
         sub_plots <- NULL
         sub_paths <- NULL
+        sub_plots_cov <- NULL
+        sub_counts_cov <- NULL
         summ <- transform(coefs, count = as.numeric(
           ave(param, param, FUN = length)))
         summ <- subset(summ, !duplicated(param)) 
@@ -161,6 +213,8 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
       sub_coefs <- NULL
       sub_plots <- NULL
       sub_paths <- NULL
+      sub_plots_cov <- NULL
+      sub_counts_cov <- NULL
       summ <- transform(coefs, count = as.numeric(
         ave(param, param, FUN = length)))
       summ <- subset(summ, !duplicated(param)) 
@@ -170,15 +224,14 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     summ$label <- ifelse(summ$level == "sub", 
                          paste0("subgroup", summ$mem),
                          summ$level)
-    a <- aggregate(count ~ lhs + rhs + label, data = summ, sum)
+    a <- aggregate(count ~ lhs + op + rhs + label, data = summ, sum)
     
     a <- a[order(-a$count, a$label),]
-    a <- reshape(a, timevar = "label", idvar = c("lhs", "rhs"), 
+    a <- reshape(a, timevar = "label", idvar = c("lhs", "op", "rhs"), 
                  direction = "wide")
     a[is.na(a)] <- 0
     a$lhs <- recode.vars(a$lhs, dat$lvarnames, dat$varnames)
     a$rhs <- recode.vars(a$rhs, dat$lvarnames, dat$varnames)
-    colnames(a)[1:2] <- c("dv", "iv")
     
     if (!is.null(dat$out)){
       write.csv(a, file.path(dat$out, "summaryPathCounts.csv"), 
@@ -187,7 +240,7 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     
     # end creating wide summaryPathCounts ------------------------------------ #
     
-    b <- aggregate(count ~ lhs + rhs + color + label + param, data = summ, sum)
+    b <- aggregate(count ~ lhs + op + rhs + color + label + param, data = summ, sum)
     b <- transform(b, xcount = ave(count, param, FUN = sum))
     # sorting by count and then dropping duplicated parameters
     # ensures that subgroup paths will be displayed as green
@@ -201,26 +254,38 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     b$labelnum[is.na(b$labelnum)] <-2
     
     b <- b[order(b$labelnum), ]
-    c <- b[!duplicated(b$param), c("lhs", "rhs", "color", "xcount")] 
+    d <- b[!duplicated(b$param), c("lhs", "op", "rhs", "color", "xcount")] 
     
-    c$row <- match(c$lhs, dat$lvarnames) - dat$n_lagged
-    c$col <- match(c$rhs, dat$lvarnames)
+    c_direct <- d[which(d$op == "~"),]
+    c_corr   <- d[which(d$op == "~~"),]
+    
+    c_direct$row <- match(c_direct$lhs, dat$lvarnames) - dat$n_lagged
+    c_direct$col <- match(c_direct$rhs, dat$lvarnames)
+    c_corr$row <- match(c_corr$lhs, dat$lvarnames) - dat$n_lagged
+    c_corr$col <- match(c_corr$rhs, dat$lvarnames)
     
     sample_counts <- matrix(0, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total - dat$n_lagged))
-    sample_counts[cbind(c$row, c$col)] <- c$xcount
+    sample_counts[cbind(c_direct$row, c_direct$col)] <- c_direct$xcount
+    sample_counts_corr <- matrix(0, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total - dat$n_lagged))
+    sample_counts_corr[cbind(c_corr$row, c_corr$col)] <- c_corr$xcount
     colnames(sample_counts) <- dat$varnames
     rownames(sample_counts) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
+    colnames(sample_counts_corr) <- dat$varnames
+    rownames(sample_counts_corr) <- dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)]
     
     if (dat$plot){
       
       sample_colors <- matrix(NA, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total-dat$n_lagged))
-      sample_colors[cbind(c$row, c$col)] <- c$color
+      sample_colors[cbind(c_direct$row, c_direct$col)] <- c_direct$color
+      sample_colors_corr <- matrix(NA, ncol = (dat$n_vars_total), nrow = (dat$n_vars_total-dat$n_lagged))
+      sample_colors_corr[cbind(c_corr$row, c_corr$col)] <- c_corr$color
       
       sample_paths  <- t(sample_counts)/dat$n_subj
+      sample_paths_corr <- t(sample_counts_corr)/dat$n_subj
       
       lagged     <- sample_paths[1:(dat$n_lagged), ]
       if (dat$n_exog_total>0){
-        lagged[,(dat$n_lagged+1):(dat$n_lagged+dat$n_exog_total)] <-0
+        lagged[,(dat$n_lagged+1):(dat$n_lagged+dat$n_exog_total-dat$n_exog_lag)] <-0
       }
       contemp    <- sample_paths[(dat$n_lagged+1):(dat$n_vars_total), ]
       plot_vals  <- rbind(w2e(lagged), w2e(contemp))
@@ -244,21 +309,49 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
                                    label.cex    = 2,
                                    DoNotPlot    = TRUE), 
                             error = function(e) e)
+      samp_colors_corr <- t(sample_colors_corr)
+      colors_corr      <- c(samp_colors_corr[1:(dat$n_lagged), ],
+                       samp_colors_corr[(dat$n_lagged+1):(dat$n_vars_total), ])
+      colors_corr      <- colors_corr[!is.na(colors_corr)]
+      
+      if (sum(sample_paths_corr)>0){
+        corr   <- sample_paths_corr[(dat$n_lagged+1):(dat$n_vars_total), ]
+        plot_vals_corr  <- w2e(corr)
+        samp_plot_cov <- tryCatch(qgraph(plot_vals_corr,
+                                          layout       = "circle",
+                                          edge.labels  = FALSE,
+                                          edge.color   = colors_corr,
+                                          parallelEdge = TRUE,
+                                          fade         = FALSE,
+                                          arrows       = FALSE,
+                                          labels       = 
+                                            dat$varnames[(dat$n_lagged+1):(dat$n_vars_total)],
+                                          label.cex    = 2,
+                                          DoNotPlot    = TRUE), 
+                                   error = function(e) e)
+      }
+       
       
       if (!is.null(dat$out)){
         pdf(file.path(dat$out, "summaryPathsPlot.pdf"))
         plot(samp_plot)
         dev.off()
+        if(sum(sample_paths_corr)>0){
+        pdf(file.path(dat$out, "summaryCovPlot.pdf"))
+        plot(samp_plot_cov)
+        dev.off()}
       }
       
-    } else samp_plot <- NULL
-    
-    indiv_paths     <- coefs[, c("id", "lhs", "rhs", "est.std", 
+    } else {
+      samp_plot <- NULL
+      samp_plot_cov <- NULL
+      }
+    indiv_paths     <- coefs[, c("id", "lhs", "op", "rhs", "est.std", 
                                  "se", "z", "pvalue", "level")]
     indiv_paths$lhs <- recode.vars(indiv_paths$lhs, dat$lvarnames, dat$varnames)
     indiv_paths$rhs <- recode.vars(indiv_paths$rhs, dat$lvarnames, dat$varnames)
     indiv_paths     <- indiv_paths[order(indiv_paths$id, indiv_paths$level), ]
-    colnames(indiv_paths) <- c("file", "dv", "iv", "beta", "se", 
+    colnames(indiv_paths) <- c("file", "lhs","op", "rhs", "beta", "se", 
                                "z", "pval", "level")
     # } # end "if no coefficients" commented out stl 11.20.17
     # combine fit information for summaryFit.csv
@@ -293,9 +386,9 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     indiv_paths$lhs  <- recode.vars(indiv_paths$lhs, dat$lvarnames, dat$varnames)
     indiv_paths$rhs  <- recode.vars(indiv_paths$rhs, dat$lvarnames, dat$varnames)
     indiv_paths      <- indiv_paths[order(indiv_paths$file), ]
-    indiv_paths      <- indiv_paths[ ,c("file", "lhs", "rhs", "est.std", 
+    indiv_paths      <- indiv_paths[ ,c("file", "lhs","op", "rhs", "est.std", 
                                         "se", "z", "pvalue")]
-    colnames(indiv_paths) <- c("file", "dv", "iv", "beta", "se", "z", "pval")
+    colnames(indiv_paths) <- c("file", "lhs", "op", "rhs", "beta", "se", "z", "pval")
     
     fits          <- store$fits[[1L]]
     file          <- c("all")
@@ -312,6 +405,8 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     }
     
     sample_counts <- NULL
+    sample_counts_corr <- NULL
+    samp_plot_cov <- NULL
     samp_plot     <- NULL
   }
   
@@ -327,9 +422,13 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
   res <- list(fit           = fits,
               param_est     = indiv_paths,
               samp_plot     = samp_plot,
+              samp_plot_cov = samp_plot_cov,
               sub_plots     = sub_plots,
+              sub_plots_cov  = sub_plots_cov, 
               sample_counts = sample_counts,
+              sample_counts_cov =    sample_counts_corr,
               sub_counts    = sub_counts,
+              sub_counts_cov = sub_counts_cov,
               dx)  
   return(res)
   
