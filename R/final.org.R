@@ -143,8 +143,10 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
             contemp_cov    <- sub_s_counts_cov[(dat$n_lagged+1):(dat$n_vars_total), ]
             plot_vals_cov  <- w2e(contemp_cov)
             sub_colors_cov <- t(sub_s_mat_colors_cov)
-            colors     <- c(sub_colors_cov[1:(dat$n_lagged), ],
-                            sub_colors_cov[(dat$n_lagged+1):(dat$n_vars_total), ])
+            #commented out by lan 2.10.2020
+            #colors     <- c(sub_colors_cov[1:(dat$n_lagged), ],
+            #sub_colors_cov[(dat$n_lagged+1):(dat$n_vars_total), ])
+            colors    <- sub_colors_cov[(dat$n_lagged+1):(dat$n_vars_total), ]
             colors     <- colors[!is.na(colors)]
             sub_plot_cov <- tryCatch(qgraph(plot_vals_cov,
                                               layout       = "circle",
@@ -183,12 +185,14 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
                                               "PathCountsMatrix.csv")), 
                       row.names = TRUE)
           }
+          if (dat$plot & sub_spec[[s]]$n_sub_subj != 1){ ##add by lan 021220: store the sub_plot & sub_plot_cov to the plots when n>1
           sub_coefs[[s]] <- sub_s_coefs
           sub_summ[[s]]  <- sub_s_summ
           sub_plots[[s]] <- sub_plot
           sub_plots_cov[[s]] <- sub_plot_cov
           sub_counts[[s]] <- sub_s_mat_counts
           sub_counts_cov[[s]] <- sub_s_mat_counts_cov
+          }
         }
         
         summ <- do.call("rbind", sub_summ)
@@ -304,8 +308,10 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
                                    DoNotPlot    = TRUE), 
                             error = function(e) e)
       samp_colors_corr <- t(sample_colors_corr)
-      colors_corr      <- c(samp_colors_corr[1:(dat$n_lagged), ],
-                       samp_colors_corr[(dat$n_lagged+1):(dat$n_vars_total), ])
+      #commented out by lan 2.10.2020
+      # colors_corr      <- c(samp_colors_corr[1:(dat$n_lagged), ],
+      #                samp_colors_corr[(dat$n_lagged+1):(dat$n_vars_total), ])
+      colors_corr     <- samp_colors_corr[(dat$n_lagged+1):(dat$n_vars_total)]
       colors_corr      <- colors_corr[!is.na(colors_corr)]
       
       if (sum(sample_paths_corr)>0){

@@ -24,7 +24,10 @@ determine.subgroups <- function(data_list,
                                 confirm_subgroup, 
                                 out_path = NULL,
                                 sub_feature,
-                                sub_method){
+                                sub_method,
+                                sub_sim_thresh,
+                                hybrid,
+                                dir_prop_cutoff){
   #######################
   # base_syntax  = c(dat$syntax, grp[[i]]$group_paths)
   # data_list    = dat$ts_list
@@ -73,12 +76,29 @@ determine.subgroups <- function(data_list,
   
   mi_list_temp <- lapply(mi_list, 
                          function(x){x$param <- paste0(x$lhs, x$op, x$rhs)
-                         x$sig   <- ifelse(x$mi > chisq_cutoff, 1, 0)
+                         x$sig <- x$dir <- ifelse(x$mi > chisq_cutoff, 1, 0)
                          return(x)})
   
   mi_list <- lapply(mi_list_temp, 
                     function(x){subset(x, x$param %in% elig_paths)})
   
+  # consider which direction is better when adding contemporaneous similarity; not used in hybrid for now
+  if(!hybrid && dir_prop_cutoff>0){
+  for (p in 1:length(mi_list)) {
+    for (r in 1:length(mi_list[[p]][,1])) {
+      if (mi_list[[p]]$dir[r] == 1) {
+        grab_opp_mi  <- mi_list[[p]][which(mi_list[[p]]$lhs == mi_list[[p]][r,]$rhs),]
+        opp_mi_value <- grab_opp_mi[which(grab_opp_mi$rhs == mi_list[[p]][r,]$lhs),]$mi
+        if (length(opp_mi_value)>0) {
+          if(opp_mi_value>mi_list[[p]][r,]$mi) 
+            mi_list[[p]][r,]$dir <- 0
+        }
+      }
+      opp_mi_value <- 0
+    }
+  }
+
+  }
   # if no group-level paths added, don't consider z_list
   if (length(which(is.na(z_list)))==0)
   z_list <- lapply(z_list, 
@@ -121,18 +141,47 @@ determine.subgroups <- function(data_list,
   
   for (i in 1:length(mi_list)){
     for (j in 1:length(mi_list)){
-      sim_mi[i,j] <- sum(mi_list[[i]]$sig == 1 & mi_list[[j]]$sig == 1 & 
+      if(!hybrid && dir_prop_cutoff>0){
+      sim_mi[i,j] <- sum(mi_list[[i]]$dir == 1 & mi_list[[j]]$dir == 1 & 
                            sign(mi_list[[i]]$epc) == sign(mi_list[[j]]$epc), na.rm = TRUE)
       if (length(which(is.na(z_list)))==0)
-      sim_z[i,j]  <- sum(z_list[[i]]$sig == 1 & z_list[[j]]$sig == 1 &
-                           sign(z_list[[i]]$z) == sign(z_list[[j]]$z), na.rm = TRUE)
+      sim_z[i,j]  <- sum(z_list[[i]]$dir == 1 & z_list[[j]]$dir == 1 &
+                           sign(z_list[[i]]$z) == sign(z_list[[j]]$z), na.rm = TRUE)} else {
+        sim_mi[i,j] <- sum(mi_list[[i]]$sig == 1 & mi_list[[j]]$sig == 1 & 
+                             sign(mi_list[[i]]$epc) == sign(mi_list[[j]]$epc), na.rm = TRUE)
+        if (length(which(is.na(z_list)))==0)
+          sim_z[i,j]  <- sum(z_list[[i]]$sig == 1 & z_list[[j]]$sig == 1 &
+                               sign(z_list[[i]]$z) == sign(z_list[[j]]$z), na.rm = TRUE)}
     }
   }
   
   sim           <- sim_mi + sim_z
-  sim           <- sim - min(sim, na.rm = TRUE)
+  if (sub_sim_thresh == "search"){ # conduct search across thresholds to find lowest modularity
+    res <- nloptr::nloptr(
+      x0=.5,  # starting value
+      m = sim,  # similarity matrix
+      sub_method = sub_method,
+      eval_f = modmax, # objective function
+      lb = .01, # upper bound
+      ub = .99, # lower bound
+      opts = list(
+        "algorithm"="NLOPT_LN_NELDERMEAD",
+        "xtol_rel"=1.0e-8,
+        maxeval = 500)
+    )
+    sim[which(sim <= stats::quantile(sim[upper.tri(sim, diag = FALSE)], (res$solution)))] <- 0
+  } else if (sub_sim_thresh == "lowest") { # original gimme
+    sim <- sim - min(sim, na.rm = TRUE)} else{
+    toremove <- stats::quantile(sim[upper.tri(sim, diag = FALSE)], (sub_sim_thresh))
+    sim[which(sim <= toremove)] = 0
+    }
+      
   diag(sim)     <- 0
+  lay.sim = sim
+    colnames(lay.sim) = rownames(lay.sim) = NULL
+  # write.table(sim, file = paste(out_path, '/sim mat.csv', sep = ''), sep = ',')
   colnames(sim) <- rownames(sim) <- names(mi_list)
+  colnames(lay.sim) <- rownames(lay.sim) <- NULL
   if(is.null(confirm_subgroup)){
     g            <- graph.adjacency(sim, mode = "undirected", weighted = TRUE)
     weights      <- E(g)$weight
@@ -152,6 +201,17 @@ determine.subgroups <- function(data_list,
       res        <- cluster_louvain(g, weights = weights)
     if (sub_method == "Spinglass")
       res        <- cluster_spinglass(g, weights = weights)
+    
+    
+    e = igraph::get.edgelist(igraph::graph.adjacency(lay.sim, mode = "undirected", weighted = TRUE))
+    l = qgraph::qgraph.layout.fruchtermanreingold(e,
+                                                  vcount = vcount(g), weights = weights/5,
+                                                  area = 8*(vcount(g)^2),
+                                                  repulse.rad = (vcount(g)^3.1))
+    graphics::par(mfrow = c(1, 1), mar = c(0, 0, 0, 0))
+    if(length(out_path)>1) {pdf(file.path(paste(out_path,'/Subgroups Plot.pdf', sep = '')))
+    plot(res, g, layout = l)
+    dev.off() }
     
     sub_mem    <- data.frame(names      = names(membership(res)), 
                              sub_membership = as.numeric(membership(res)))

@@ -34,7 +34,9 @@ search.paths.ms <- function(obj,
                             chisq_cutoff,
                             subgroup_stage,
                             ms_allow,
-                            ms_tol){
+                            ms_tol,
+                            hybrid,
+                            dir_prop_cutoff){
   
   
   #-----------------------------------------------#
@@ -81,11 +83,6 @@ search.paths.ms <- function(obj,
               data_file = data_list[[i]])
             })
 
-                        if(!subgroup_stage){
-              writeLines(paste0("group-level search"))
-            } else {
-              writeLines(paste0("subgroup-level search"))
-            }
             for (k in 1:n_subj)
             mi_list[[k]] <- return.mis(fit[[k]], elig_paths)
           } else {
@@ -121,7 +118,7 @@ search.paths.ms <- function(obj,
         # Add the parameters with the largest MI
         #------------------------------------------------------#
         if (!all(is.na(mi_list))){
-          
+          if (ms_allow | hybrid)
           add_p     <- highest.mi(mi_list      = mi_list,
                                   indices      = indices,
                                   elig_paths   = elig_paths,
@@ -129,7 +126,20 @@ search.paths.ms <- function(obj,
                                   n_subj       = n_subj,
                                   chisq_cutoff = chisq_cutoff,
                                   allow.mult   = TRUE,
-                                  ms_tol       = ms_tol)
+                                  ms_tol       = ms_tol,
+                                  hybrid       = hybrid, 
+                                  dir_prop_cutoff = dir_prop_cutoff)
+          if (!ms_allow)
+            add_p     <- highest.mi(mi_list      = mi_list,
+                                    indices      = indices,
+                                    elig_paths   = elig_paths,
+                                    prop_cutoff  = prop_cutoff, 
+                                    n_subj       = n_subj,
+                                    chisq_cutoff = chisq_cutoff,
+                                    allow.mult   = FALSE,
+                                    ms_tol       = ms_tol,
+                                    hybrid       = hybrid, 
+                                    dir_prop_cutoff = dir_prop_cutoff)
           
           add_param <- add_p$add_param
           mi_info   <- add_p$mi_list

@@ -13,8 +13,10 @@
 #'          subgroup    = FALSE,
 #'          sub_feature = "lag & contemp",
 #'          sub_method = "Walktrap",
+#'          sub_sim_thresh    = "lowest", 
 #'          confirm_subgroup = NULL,
 #'          paths       = NULL,
+#'          exogenous = NULL,
 #'          conv_vars   = NULL,
 #'          conv_length = 16, 
 #'          conv_interval = 1,
@@ -31,7 +33,9 @@
 #'          lv_scores        = "regression",       
 #'          lv_miiv_scaling  = "first.indicator", 
 #'          lv_final_estimator = "miiv",
-#'          lasso_model_crit    = NULL)
+#'          lasso_model_crit    = NULL, 
+#'          hybrid = FALSE,
+#'          dir_prop_cutoff =0)
 #' @param data The path to the directory where the data files are located,
 #' or the name of the list containing each individual's time series. Each file
 #' or matrix must contain one matrix for each individual containing a T (time)
@@ -59,6 +63,13 @@
 #' header is used, variables should be referred to using variable names.
 #' To reference lag variables, "lag" should be added to the end of the variable
 #' name with no separation. Defaults to NULL. 
+#' @param exogenous Vector of variable names to be treated as exogenous (optional).
+#' That is, exogenous variable X can predict Y but cannot be predicted by Y.
+#' If no header is used, then variables should be referred to with V followed
+#' (with no separation) by the column number.  If a header is used, variables should be referred 
+#' to using variable names. The default for exogenous variables is that lagged effects of the exogenous 
+#' variables are not included in the model search.  If lagged paths are wanted, "&lag" should be added to the end of the variable
+#' name with no separation. Defaults to NULL.
 #' @param conv_vars Vector of variable names to be convolved via smoothed Finite Impulse 
 #' Response (sFIR). Note, conv_vars are not not automatically considered exogenous variables.
 #' To treat conv_vars as exogenous use the exogenous argument. Variables listed in conv_vars 
@@ -106,6 +117,9 @@
 #' @param sub_method Community detection method used to cluster individuals into subgroups. Options align 
 #' with those available in the igraph package: "Walktrap" (default), "Infomap", "Louvain", "Edge Betweenness", 
 #' "Label Prop", "Fast Greedy", "Leading Eigen", and "Spinglass". 
+#' @param sub_sim_thresh Threshold for inducing sparsity in similarity matrix. Options are: the percent of edges 
+#' in the similarity matrix to set to zero (e.g., .25 would set the lower quartile), "lowest" (default) subtracts 
+#' the minimum value from all values, and "search" searches across thresholds to arrive at one providing highest modularity.  
 #' @param groupcutoff Cutoff value for group-level paths. Defaults to .75,
 #' indicating that a path must be significant across 75\% of individuals to be
 #' included as a group-level path.
@@ -116,7 +130,8 @@
 #' @param ms_allow Logical. If TRUE provides multiple solutions when more than one path has identical 
 #' modification index values.  When ms_allow=TRUE, it is recommended
 #' to set ar=FALSE.  Multiple solutions are unlikely to be found when ar=TRUE.  Additionally,
-#' subgroup should be set to FALSE.
+#' subgroup should be set to FALSE.  Output files for individuals with multiple solutions will represent the last solution 
+#' found for the individual, not necessarily the best solution for the individual.
 #' @param ms_tol Precision used when evaluating similarity of modification indices when ms_allow = TRUE.  We recommend
 #' that ms_tol not be greater than the default, especially when standardize=TRUE.     
 #' Defaults to 1e-5.
@@ -131,6 +146,9 @@
 #' @param lv_final_estimator Estimator for final estimations. "miiv" (Default) or "pml" (pseudo-ML). 
 #' @param lasso_model_crit When not null, invokes multiLASSO approach for the GIMME model search procedure. Arguments 
 #' indicate the model selection criterion to use for model selection: 'bic' (select on BIC), 'aic', 'aicc', 'hqc', 'cv' (cross-validation). 
+#' @param hybrid Logical. If TRUE, enables hybrid-VAR models where both directed contemporaneous paths and contemporaneous 	
+#' covariances among residuals are candidate relations in the search space. Defaults to FALSE.
+#' @param dir_prop_cutoff Option to require that the directionality of a relation has to be higher than the reverse direction for a prespecified proportion of indivdiuals.  
 #' @details
 #'  In main output directory:
 #'  \itemize{
@@ -214,8 +232,10 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               subgroup         = FALSE,
                               sub_feature      = "lag & contemp",
                               sub_method       = "Walktrap",
+                              sub_sim_thresh   = "lowest", 
                               confirm_subgroup = NULL,
                               paths            = NULL,
+                              exogenous        = NULL,
                               conv_vars        = NULL,
                               conv_length      = 16, 
                               conv_interval    = 1, 
@@ -232,17 +252,16 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               lv_scores        = "regression",       # c("regression", "bartlett")
                               lv_miiv_scaling  = "first.indicator",  # c("group", "individual")
                               lv_final_estimator = "miiv",
-                              lasso_model_crit = NULL){          # c("miiv", "pml")
+                              lasso_model_crit = NULL, 
+                              hybrid = FALSE,
+                              dir_prop_cutoff = 0){          # c("miiv", "pml")
   
-  hybrid <- FALSE
-
   # satisfy CRAN checks
   ind     = NULL
   varnames = NULL
   lvarnames = NULL
   sub_membership = NULL
-  exogenous        = NULL
-  
+
   setupConvolve = NULL
   ts = NULL
   setupFinalDataChecks = NULL
@@ -307,8 +326,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
    #              predict_with_interactions  = NULL)
    #   
    # } else {
-   hybrid = FALSE
-   
+
   dat         <- setup(data                 = data,
                        sep                  = sep,
                        header               = header,
@@ -382,7 +400,9 @@ gimmeSEM <- gimme <- function(data             = NULL,
     chisq_cutoff   = qchisq(1-.05/dat$n_subj, 1),
     subgroup_stage = FALSE,
     ms_allow       = ms_allow,
-    ms_tol         = ms_tol
+    ms_tol         = ms_tol, 
+    hybrid         = hybrid,
+    dir_prop_cutoff = dir_prop_cutoff
   )
   
   
@@ -500,7 +520,10 @@ gimmeSEM <- gimme <- function(data             = NULL,
         sub_feature,
         sub_method,
         ms_tol   = ms_tol,
-        ms_allow = FALSE
+        ms_allow = FALSE,
+        sub_sim_thresh = sub_sim_thresh,
+        hybrid, 
+        dir_prop_cutoff = dir_prop_cutoff
       )
     })
 
@@ -646,9 +669,9 @@ gimmeSEM <- gimme <- function(data             = NULL,
       }
 
       if(subgroup){
-        indiv.search.ms(dat, grp[[j]], ind[[j]], ms_tol, ms_allow, j)
+        indiv.search.ms(dat, grp[[j]], ind[[j]], ms_tol, ms_allow, j, hybrid = FALSE)
       } else {
-        indiv.search.ms(dat, grp[[j]], ind, ms_tol, ms_allow, j)
+        indiv.search.ms(dat, grp[[j]], ind, ms_tol, ms_allow, j, hybrid = FALSE)
       }
 
     })
