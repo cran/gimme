@@ -7,7 +7,7 @@
 setupTransformData <- function(ts_list       = NULL, 
                                varLabels     = NULL,
                                ctrlOpts      = NULL,
-                               ms_allow){
+                               ms_allow      = FALSE){
   
   
   #-------------------------------------------------------------#
@@ -206,7 +206,8 @@ setupTransformData <- function(ts_list       = NULL,
   #-------------------------------------------------------------#
   
   # todo
-  # reorder colnames? 
+  # reorder colnames?  <- Cara can you check if this still has to be done? 
+  # if so, could you do and make sure that column names matches the data it should at the end?
   # throw warning if varLabels$coln does not equal colnames(ts_list[[1]])
   ts_list <- lapply(ts_list, function(x){x[,varLabels$coln]})
    
@@ -257,10 +258,10 @@ setupTransformData <- function(ts_list       = NULL,
                   paste0(names(ts_list)[numericCols == TRUE], collapse = "\n")))
     }
   } 
-  if (n_subjects == 1 & !ctrlOpts$ind) {
-    stop(paste0('gimme ERROR: only one subject detected in data directory. ',
-                'Please use indSEM function instead.'))
-  }
+  # if (n_subjects == 1 & !ctrlOpts$ind) {
+  #   stop(paste0('gimme ERROR: only one subject detected in data directory. ',
+  #               'Please use indSEM function instead.'))
+  # }
   
   
   return(ts_list)
