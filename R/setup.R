@@ -23,7 +23,9 @@ setup <- function (data,
                    lv_estimator = "miiv",            
                    lv_miiv_scaling  = "first.indicator", 
                    lv_final_estimator = "miiv",
-                   ms_allow = FALSE) {
+                   ms_allow = FALSE,
+                   hybrid,
+                   VAR) {
   
 
     
@@ -420,7 +422,9 @@ setup <- function (data,
               "chisq_cutoff_mi_epc" = qchisq(1-(.05/((length(varLabels$coln)*(length(varLabels$coln)-1)/2)*length(ts_list))), 1),
               "varLabels" = varLabels,
               "ctrlOpts"  = ctrlOpts,
-              "lvgimme"   = lvgimme
+              "lvgimme"   = lvgimme,
+              "hybrid"    = hybrid,
+              "VAR"       = VAR
     )
   return(dat)
 }
