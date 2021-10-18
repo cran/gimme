@@ -1,4 +1,4 @@
-## ---- eval = FALSE-------------------------------------------------------
+## ---- eval = FALSE------------------------------------------------------------
 #  gimme(                  # can use "gimme" or "gimmeSEM"
 #      data = '',          # source directory where your data are
 #      out = '',           # output directory where you'd like your output to go

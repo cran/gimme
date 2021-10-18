@@ -206,7 +206,7 @@
 #' @references Adriene M. Beltz & Peter C. M. Molenaar (2016) Dealing 
 #' with Multiple Solutions in Structural Vector Autoregressive Models, 
 #' Multivariate Behavioral Research, 51:2-3, 357-373.
-#' @author Stephanie Lane and Zachary Fisher
+#' @author Stephanie Lane, Zachary Fisher, & Kathleen Gates
 #' @examples
 #'  \dontrun{
 #' paths <- 'V2 ~ V1
@@ -293,6 +293,10 @@ gimmeSEM <- gimme <- function(data             = NULL,
     stop(paste0("gimme ERROR: Autoregressive paths have to be open for var-gimme.",
                 " Please ensure that ar=TRUE if var=TRUE."))
   }
+  
+  # so all hybrid-related rules apply, as we are looking at covs of residuals
+  if(VAR)
+    hybrid = TRUE
   
    sub_membership = NULL
    
@@ -395,16 +399,16 @@ gimmeSEM <- gimme <- function(data             = NULL,
     "group_paths"   = c()
   )
 
+  if(VAR){
+    dat$candidate_paths <- grep("*lag", dat$candidate_paths, value = TRUE)
+  }
+  
   if(!hybrid){
     elig_paths = dat$candidate_paths
   }else{
     elig_paths = c(dat$candidate_paths, dat$candidate_corr)
   }
   
-  if(VAR){
-    dat$candidate_paths <- grep("*lag", dat$candidate_paths, value = TRUE)
-    elig_paths = c(dat$candidate_paths, dat$candidate_corr)
-  }
   
 
 
@@ -611,9 +615,9 @@ gimmeSEM <- gimme <- function(data             = NULL,
   
     # 2.19.2019 kmg: ind[1]$ returns NULL for subgroups; changed to ind[[1]] here
     if(subgroup){
-      store <- indiv.search(dat, grp[[1]], ind[[1]], hybrid)
+      store <- indiv.search(dat, grp[[1]], ind[[1]])
     } else {
-      store <- indiv.search(dat, grp[[1]], ind[1], hybrid)
+      store <- indiv.search(dat, grp[[1]], ind[1])
     }
     
     if(!is.null(lv_model)){
@@ -689,9 +693,9 @@ gimmeSEM <- gimme <- function(data             = NULL,
       }
 
       if(subgroup){
-        indiv.search.ms(dat, grp[[j]], ind[[j]], ms_tol, ms_allow, j, hybrid = FALSE)
+        indiv.search.ms(dat, grp[[j]], ind[[j]], ms_tol, ms_allow, j)
       } else {
-        indiv.search.ms(dat, grp[[j]], ind, ms_tol, ms_allow, j, hybrid = FALSE)
+        indiv.search.ms(dat, grp[[j]], ind, ms_tol, ms_allow, j)
       }
 
     })
