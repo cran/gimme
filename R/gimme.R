@@ -36,7 +36,8 @@
 #'          lasso_model_crit    = NULL, 
 #'          hybrid = FALSE,
 #'          VAR = FALSE,
-#'          dir_prop_cutoff =0)
+#'          dir_prop_cutoff =0,
+#'          ordered = NULL)
 #' @param data The path to the directory where the data files are located,
 #' or the name of the list containing each individual's time series. Each file
 #' or matrix must contain one matrix for each individual containing a T (time)
@@ -47,9 +48,9 @@
 #' (optional). If specified,
 #' a copy of output files will be replaced in directory. If directory at
 #' specified path does not exist, it will be created.
-#' @param sep The spacing of the data files. 
-#' "" indicates space-delimited,
-#' "/t" indicates tab-delimited, "," indicates comma delimited. Only necessary
+#' @param sep The spacing of the data files. Follows R convention.
+#' "" indicates space-delimited, backslash 
+#' "t" indicates tab-delimited, "," indicates comma delimited. Only necessary
 #' to specify if reading data in from physical directory.
 #' @param header Logical. Indicate TRUE for data files with a header. Only
 #' necessary to specify if reading data in from physical directory.
@@ -152,6 +153,7 @@
 #' @param VAR Logical.  If true, VAR models where contemporaneous covariances among residuals are candidate relations in the 
 #' search space.  Defaults to FALSE.
 #' @param dir_prop_cutoff Option to require that the directionality of a relation has to be higher than the reverse direction for a prespecified proportion of indivdiuals.  
+#' @param ordered A character vector containing the names of all ordered categorical variables in the model.
 #' @details
 #'  In main output directory:
 #'  \itemize{
@@ -206,7 +208,7 @@
 #' @references Adriene M. Beltz & Peter C. M. Molenaar (2016) Dealing 
 #' with Multiple Solutions in Structural Vector Autoregressive Models, 
 #' Multivariate Behavioral Research, 51:2-3, 357-373.
-#' @author Stephanie Lane, Zachary Fisher, & Kathleen Gates
+#' @author Zachary Fisher, Kathleen Gates, & Stephanie Lane
 #' @examples
 #'  \dontrun{
 #' paths <- 'V2 ~ V1
@@ -251,14 +253,15 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               ms_allow         = FALSE,
                               ms_tol           = 1e-5,
                               lv_model         = NULL, 
-                              lv_estimator     = "miiv",             # c("miiv", "pml")
-                              lv_scores        = "regression",       # c("regression", "bartlett")
-                              lv_miiv_scaling  = "first.indicator",  # c("group", "individual")
+                              lv_estimator     = "miiv",             
+                              lv_scores        = "regression",       
+                              lv_miiv_scaling  = "first.indicator",  
                               lv_final_estimator = "miiv",
                               lasso_model_crit = NULL, 
-                              hybrid = FALSE,
-                              VAR = FALSE,
-                              dir_prop_cutoff = 0){          # c("miiv", "pml")
+                              hybrid           = FALSE,
+                              VAR              = FALSE,
+                              dir_prop_cutoff  = 0,
+                              ordered          = NULL){          
   
   # satisfy CRAN checks
   ind     = NULL
@@ -366,7 +369,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        lv_miiv_scaling      = lv_miiv_scaling,
                        ms_allow             = ms_allow,
                        hybrid               = hybrid,
-                       VAR                  = VAR)
+                       VAR                  = VAR,
+                       ordered              = ordered)
 
   
   #Error Check for Confirm Subgroup Labels
@@ -490,7 +494,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
         n_paths        = grp[[i]]$n_group_paths,
         n_subj         = dat$n_subj,
         prop_cutoff    = dat$group_cutoff,
-        elig_paths     = grp$group_paths,
+        elig_paths     = grp[[i]]$group_paths,
         subgroup_stage = FALSE
       )
       

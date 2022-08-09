@@ -37,7 +37,8 @@ gimmeSEM(data        = NULL,
          lasso_model_crit    = NULL, 
          hybrid = FALSE,
          VAR = FALSE,
-         dir_prop_cutoff =0)
+         dir_prop_cutoff =0,
+         ordered = NULL)
 }
 \arguments{
 \item{data}{The path to the directory where the data files are located,
@@ -52,9 +53,9 @@ but can have different lengths of observations (T).}
 a copy of output files will be replaced in directory. If directory at
 specified path does not exist, it will be created.}
 
-\item{sep}{The spacing of the data files. 
-"" indicates space-delimited,
-"/t" indicates tab-delimited, "," indicates comma delimited. Only necessary
+\item{sep}{The spacing of the data files. Follows R convention.
+"" indicates space-delimited, backslash 
+"t" indicates tab-delimited, "," indicates comma delimited. Only necessary
 to specify if reading data in from physical directory.}
 
 \item{header}{Logical. Indicate TRUE for data files with a header. Only
@@ -187,6 +188,8 @@ covariances among residuals are candidate relations in the search space. Default
 search space.  Defaults to FALSE.}
 
 \item{dir_prop_cutoff}{Option to require that the directionality of a relation has to be higher than the reverse direction for a prespecified proportion of indivdiuals.}
+
+\item{ordered}{A character vector containing the names of all ordered categorical variables in the model.}
 }
 \description{
 This function identifies structural equation models for each
@@ -269,6 +272,6 @@ with Multiple Solutions in Structural Vector Autoregressive Models,
 Multivariate Behavioral Research, 51:2-3, 357-373.
 }
 \author{
-Stephanie Lane, Zachary Fisher, & Kathleen Gates
+Zachary Fisher, Kathleen Gates, & Stephanie Lane
 }
 \keyword{gimmeSEM}
