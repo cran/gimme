@@ -17,6 +17,7 @@
 #'          confirm_subgroup = NULL,
 #'          paths       = NULL,
 #'          exogenous = NULL,
+#'          outcome   = NULL,
 #'          conv_vars   = NULL,
 #'          conv_length = 16, 
 #'          conv_interval = 1,
@@ -24,7 +25,7 @@
 #'          mean_center_mult = FALSE,
 #'          standardize = FALSE,
 #'          groupcutoff = .75,
-#'          subcutoff   = .5,
+#'          subcutoff   = .75,
 #'          diagnos     = FALSE, 
 #'          ms_allow         = FALSE,
 #'          ms_tol           = 1e-5,
@@ -59,10 +60,10 @@
 #' to set ar=FALSE.  Multiple solutions are unlikely to be found when ar=TRUE.  Defaults to TRUE.
 #' @param paths \code{lavaan}-style syntax containing paths with which
 #' to begin model estimation (optional). That is, Y~X indicates that Y
-#' is regressed on X, or X predicts Y. If no header is used,
-#' then variables should be referred to with V followed (with no separation)
-#' by the column number. If a
-#' header is used, variables should be referred to using variable names.
+#' is regressed on X, or X predicts Y. Paths can also be set to a specific value for estimation using \code{lavaan}-style syntax 
+#' (e.g., 'V4 ~ 0.5*V3'), or set to 0 so that they will not be estimated 
+#' (e.g., 'V4 ~ 0*V3'). If no header is used, then variables should be referred to with V followed (with no separation)
+#' by the column number. If a header is used, variables should be referred to using variable names.
 #' To reference lag variables, "lag" should be added to the end of the variable
 #' name with no separation. Defaults to NULL. 
 #' @param exogenous Vector of variable names to be treated as exogenous (optional).
@@ -72,16 +73,18 @@
 #' to using variable names. The default for exogenous variables is that lagged effects of the exogenous 
 #' variables are not included in the model search.  If lagged paths are wanted, "&lag" should be added to the end of the variable
 #' name with no separation. Defaults to NULL.
+#' @param outcome Vector of variable names to be treated as outcome (optional). This is a variable
+#' that can be predicted by others but cannot predict. If no header is used, then variables should be referred to with V followed
+#' (with no separation) by the column number.  If a header is used, variables should be referred 
+#' to using variable names.
 #' @param conv_vars Vector of variable names to be convolved via smoothed Finite Impulse 
 #' Response (sFIR). Note, conv_vars are not not automatically considered exogenous variables.
 #' To treat conv_vars as exogenous use the exogenous argument. Variables listed in conv_vars 
-#' must be binary variables. If there is missing data in the endogenous variables their values 
-#' will be imputed for the convolution operation only. Defaults to NULL. ### If there are multiple 
-#' variables listed in conv_vars they are not used in the convolution of additional conv_vars.## 
-#' You can't do lagged variables.
+#' must be binary variables. You cannot do lagged variables. If there is missing data in the endogenous variables their values 
+#' will be imputed for the convolution operation only. Defaults to NULL. 
 #' @param conv_length Expected response length in seconds. For functional MRI BOLD, 16 seconds (default) is typical
 #' for the hemodynamic response function. 
-#' @param conv_interval Interval between data acquisition. Currently must be a constant. For 
+#' @param conv_interval Interval between data acquisition. Currently conv_length/conv_interval must be an integer. For 
 #' fMRI studies, this is the repetition time. Defaults to 1. 
 #' @param mult_vars Vector of variable names to be multiplied to explore bilinear/modulatory
 #' effects (optional). All multiplied variables will be treated as exogenous (X can predict
@@ -125,10 +128,10 @@
 #' @param groupcutoff Cutoff value for group-level paths. Defaults to .75,
 #' indicating that a path must be significant across 75\% of individuals to be
 #' included as a group-level path.
-#' @param subcutoff Cutoff value for subgroup- level paths. Defaults to .5,
-#' indicating that a path must be significant across at least 50\% of the
+#' @param subcutoff Cutoff value for subgroup- level paths. Defaults to .75,
+#' indicating that a path must be significant across at least 75\% of the
 #' individuals in a subgroup to be considered a subgroup-level path.
-#' @param diagnos Logical.If TRUE provides internal output for diagnostic purposes. Defaults to FALSE. 
+#' @param diagnos Logical. If TRUE provides internal output for diagnostic purposes. Defaults to FALSE. 
 #' @param ms_allow Logical. If TRUE provides multiple solutions when more than one path has identical 
 #' modification index values.  When ms_allow=TRUE, it is recommended
 #' to set ar=FALSE.  Multiple solutions are unlikely to be found when ar=TRUE.  Additionally,
@@ -196,6 +199,9 @@
 #'   of each path for each individual.
 #'  \item{\strong{\emph{id}StdErrors}} Contains individual-level standard errors
 #'  for each path for each individual.
+#'  \item{\strong{\emph{id}EstRF}} Produced if conv_vars is not NULL. 
+#'  Contains individual-level estimated response function (e.g., hemodynamic response function (HRF) or relevant response function).
+#'  One column for each convolved variable, output length is equal to conv_length input.
 #'  \item{\strong{\emph{id}Plot}} Contains individual-level plots. Red paths
 #'  represent positive weights and blue paths represent negative weights.
 #' }
@@ -241,6 +247,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               confirm_subgroup = NULL,
                               paths            = NULL,
                               exogenous        = NULL,
+                              outcome          = NULL,
                               conv_vars        = NULL,
                               conv_length      = 16, 
                               conv_interval    = 1, 
@@ -248,7 +255,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               mean_center_mult = FALSE,
                               standardize      = FALSE,
                               groupcutoff      = .75,
-                              subcutoff        = .5,
+                              subcutoff        = .75,
                               diagnos          = FALSE,
                               ms_allow         = FALSE,
                               ms_tol           = 1e-5,
@@ -352,6 +359,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        ar                   = ar,
                        paths                = paths,
                        exogenous            = exogenous,
+                       outcome              = outcome,
                        mult_vars            = mult_vars,
                        mean_center_mult     = mean_center_mult,
                        standardize          = standardize,
@@ -675,7 +683,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
                 psi_unstd       = store$psiunstd,
                 sim_matrix      = sub[[1]]$sim, 
                 syntax          = dat$syntax,
-                lvgimme         = dat$lvgimme
+                lvgimme         = dat$lvgimme,
+                rf_est         = dat$rf_est # 6.19.22 kad: added HRF estimates 
                 )
     class(res) <- "gimmep"
     

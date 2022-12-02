@@ -26,6 +26,17 @@ setupTransformData <- function(ts_list       = NULL,
     
   }
   
+  if(!is.null(varLabels$out)){
+    
+    for(out in setdiff(varLabels$outc, c(varLabels$mult, varLabels$lagg))){
+      if (!out %in% colnames(ts_list[[1]])){
+        stop(paste0('gimme ERROR: Outcome variable name provided is not in data column names
+                    Please fix.'))
+      }
+    }
+    
+  }
+  
   if (ncol(ts_list[[1]]) == 1) {
     
     stop(paste0("gimme ERROR: only one column of data read in. ",
@@ -43,13 +54,21 @@ setupTransformData <- function(ts_list       = NULL,
   #-------------------------------------------------------------#
   if(!is.null(varLabels$conv)){
     
-    ts_list <- setupConvolve(
+    # 6.19.21 kad: using now modified setupConvolve, return ts_est_list which also has HRF estimates
+    ts_list_est <- setupConvolve(
       ts_list       = ts_list, 
       varLabels     = varLabels, 
       conv_length   = ctrlOpts$conv_length, 
       conv_interval = ctrlOpts$conv_interval
     )
     
+    # 6.19.21 kad: separate out data (ts_list) and HRF estimates
+    ts_list <- lapply(ts_list_est, function(df){df$data})
+    rf_est <- lapply(ts_list_est, function(df){df$estimates})
+    
+  }else{
+    # 6.19.21 kad: return NULL rf_est if no convolved vars
+    rf_est = NULL
   }
   #-------------------------------------------------------------#
   
@@ -204,11 +223,7 @@ setupTransformData <- function(ts_list       = NULL,
   #-------------------------------------------------------------#
   # Final data checks
   #-------------------------------------------------------------#
-  
-  # todo
-  # reorder colnames?  <- Cara can you check if this still has to be done? 
-  # if so, could you do and make sure that column names matches the data it should at the end?
-  # throw warning if varLabels$coln does not equal colnames(ts_list[[1]])
+
   ts_list <- lapply(ts_list, function(x){x[,varLabels$coln]})
    
   
@@ -273,7 +288,8 @@ setupTransformData <- function(ts_list       = NULL,
   #               'Please use indSEM function instead.'))
   # }
   
-  
-  return(ts_list)
+  # 6.19.22 kad: return now ts_est_list containing both ts_list and hrf estimates
+  ts_est_list <- list(ts_list = ts_list, rf_est = rf_est)
+  return(ts_est_list)
   
 }

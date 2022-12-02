@@ -1,6 +1,6 @@
 #' Set up base syntax file.
 #' @keywords internal
-setupBaseSyntax  <- function(paths, varLabels, ctrlOpts){
+setupBaseSyntax  <- function(paths, remove, varLabels, ctrlOpts){
   
     #-------------------------------------------------------------#
     # NULL MODEL CONTAINS
@@ -13,9 +13,9 @@ setupBaseSyntax  <- function(paths, varLabels, ctrlOpts){
       # Any fixed paths
     #-------------------------------------------------------------#
   
-    # Var among variables than can be predicted.
+    # Var among variables than can be predicted (reminder - endo includes outcome variables).
     var.endo <- paste0(varLabels$endo, "~~", varLabels$endo)
-  
+
     # Intercepts of endogenous variables
     int.endo  <- paste0(varLabels$endo, "~1")
   
@@ -43,7 +43,7 @@ setupBaseSyntax  <- function(paths, varLabels, ctrlOpts){
     # Nonsense paths (not fixed to zero)
     nons.paths <- c(t(outer(varLabels$exog, varLabels$endo, function(x, y) paste0(x, "~", y))))
     
-    # Any fixed paths
+    # Any fixed paths (kad note: now includes paths set to a specific (non-zero) value)
     fixed.paths <- paths
     
     if(ctrlOpts$ar) {
@@ -55,10 +55,10 @@ setupBaseSyntax  <- function(paths, varLabels, ctrlOpts){
     }
     
     # All Possible Paths
-    all.poss <- outer(varLabels$endo, c(varLabels$endo, varLabels$exog), function(x, y) paste0(x, "~", y))
+    all.poss <- outer(varLabels$endo, setdiff(c(varLabels$endo, varLabels$exog), varLabels$outc), function(x, y) paste0(x, "~", y))
     all.poss <- c(all.poss[lower.tri(all.poss, diag = FALSE)], all.poss[upper.tri(all.poss, diag = FALSE)])
-    
     # All Possible Contemporaneous Correlations
+    # KMG note: currently doesn't include outcome variables
     all.corr <- outer(varLabels$endo, varLabels$endo, function(x,y) paste0(x, "~~", y))
     all.corr <- c(all.corr[lower.tri(all.corr, diag = FALSE)], all.corr[upper.tri(all.corr, diag = FALSE)])
     # Both V1~~V2 and V2~~V1 are kept for now because we don't know which one lavaan produces
@@ -93,7 +93,8 @@ setupBaseSyntax  <- function(paths, varLabels, ctrlOpts){
     return(list(
       syntax = base.syntax,
       fixed.paths = fixed.paths,
-      candidate.paths = setdiff(all.poss, fixed.paths),
+      # 7.16.22 kad: now removing paths set to a fixed value (both zero and non-zero) from candidate paths
+      candidate.paths = setdiff(all.poss, c(fixed.paths,remove)), 
       candidate.corr = all.corr,
       nonsense.paths =  nons.paths 
     ))

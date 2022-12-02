@@ -7,6 +7,7 @@ setup <- function (data,
                    ar,
                    paths,
                    exogenous,
+                   outcome,
                    mult_vars,
                    mean_center_mult,
                    standardize,
@@ -291,12 +292,15 @@ setup <- function (data,
   orig <- colnames(ts_list[[1]]) 
   uexo <- unique(exogenous)
   conv <- conv_vars
-  lagg <- paste0(setdiff(orig,unique(exog_con, conv)), "lag")
+  lagg <- paste0(setdiff(orig,unique(exog_con,conv)), "lag")
   mult <- setupMultVarNames(mult_vars)
   exog <- unique(c(uexo, mult, lagg))
-  endo <- setdiff(orig, exog) # only true if ar = TRUE
+  if(!is.null(outcome)){
+  outc <- unique(c(outcome, (paste0(outcome, "lag"))))
+  } else {outc <- NULL}
+  endo <- setdiff(orig, c(exog)) # only true if ar = TRUE
   catg <- NULL
-  stnd <- if(standardize) setdiff(c(endo,exog), c(catg, conv_vars)) else NULL
+  stnd <- if(standardize) setdiff(c(endo,outc, exog), c(catg, conv_vars)) else NULL
   #coln <- c(endo,exog) # future column names of data
   coln <- unique(c(lagg, endo, exog_con, mult)) 
   # cont_endog <- c(endo, exog_con)
@@ -308,13 +312,14 @@ setup <- function (data,
     conv = conv,
     mult = mult,
     exog = exog,
+    outc  = outc,
     endo = endo,
     catg = catg,
     stnd = stnd,
     coln = coln,
     exog_lag = exog_lag,
     exog_con = exog_con,
-    ordered = ordered
+    ordered  = ordered
   )
   
   class(varLabels) <- "varLabels"
@@ -330,7 +335,7 @@ setup <- function (data,
   # Final data manipulation.
   #-------------------------------------------------------------#
   # (1) early data checks
-  # (2) convolve contemporaneous 
+  # (2) convolve contemporaneous and return HRF est (6.19.22 kad)
   # (3) standardize (including conv_vars post convolution)
   # (4) lag data (creating any lagged conv_vars)
   # (5) remove lagged conv_vars (if neccessary)
@@ -338,12 +343,16 @@ setup <- function (data,
   # (7) late data checks
   #-------------------------------------------------------------#
   
-  ts_list <- setupTransformData(
+  # 6.19.22 kad: using now modified setupTransformData function, return 
+  # both data (ts_list) and HRF estimates (which may be null) and separate 
+  ts_est_list <- setupTransformData( 
     ts_list   = ts_list,
     varLabels = varLabels,
     ctrlOpts  = ctrlOpts,
     ms_allow  = ms_allow
   )
+  ts_list <- ts_est_list$ts_list
+  rf_est <- ts_est_list$rf_est
 
   #-------------------------------------------------------------#
   
@@ -369,11 +378,13 @@ setup <- function (data,
     pathInfo <- setupPrepPaths(ctrlOpts$paths, varLabels, ctrlOpts)
     remove   <- pathInfo$remove  
     paths    <- pathInfo$paths
+    zero.paths <- pathInfo$zero.paths # 8.13.22 kad: return paths set to 0 by user as well
     
   } else {
     
     paths    <- ctrlOpts$paths
     remove   <- NULL
+    zero.paths <- NULL
     
   }
   #-------------------------------------------------------------#
@@ -382,7 +393,7 @@ setup <- function (data,
   #-------------------------------------------------------------#
   # Prepare paths argument if semigimme is specified
   #-------------------------------------------------------------#
-  pathList <- setupBaseSyntax(paths, varLabels, ctrlOpts)
+  pathList <- setupBaseSyntax(paths, remove, varLabels, ctrlOpts) # 7.16.22 kad: added in "remove" arg so user can set specific path values
   
   #-------------------------------------------------------------#
   
@@ -396,6 +407,7 @@ setup <- function (data,
               "n_lagged" = length(varLabels$lagg),
               "n_exog_lag" = length(exog_lag),
               "n_exog" = length(varLabels$uexo),
+              "n_out"  = length(varLabels$uout),
               "n_bilinear" = length(varLabels$mult),
               "n_endog"  = length(varLabels$endo),
               "n_exog_total" = length(c(varLabels$uexo, varLabels$mult)),
@@ -425,7 +437,9 @@ setup <- function (data,
               "ctrlOpts"  = ctrlOpts,
               "lvgimme"   = lvgimme,
               "hybrid"    = hybrid,
-              "VAR"       = VAR
+              "VAR"       = VAR,
+              "rf_est" = rf_est, # 6.19.22 kad: return HRF estimates
+              "zero.paths" = zero.paths # 8.13.22 kad: return paths set to 0 by the user
     )
   return(dat)
 }
