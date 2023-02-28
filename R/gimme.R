@@ -642,10 +642,6 @@ gimmeSEM <- gimme <- function(data             = NULL,
       )
     }
   
-    print.gimme(x = sub[[1]],
-                y = subgroup,
-                z = dat)
-  
     # wrap-up and create output
     final <- final.org(dat,
                        grp = grp[[1]],
@@ -653,6 +649,11 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        sub_spec = sub_spec[[1]],
                        diagnos = diagnos,
                        store)
+    
+    print.gimme(x = sub[[1]],
+                y = subgroup,
+                z = dat)
+    
   
     # plot.gimmep convenience functions. 
     # if you change an object name here, 
