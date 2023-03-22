@@ -1,7 +1,7 @@
 Package: gimme
 Title: Group Iterative Multiple Model Estimation
-Version: 0.7-12
-Date: 2023-03-16
+Version: 0.7-13
+Date: 2023-03-23
 Author: Stephanie Lane [aut, trl],
     Kathleen Gates [aut, cre, ccp],
     Zachary Fisher [aut], 
@@ -34,6 +34,6 @@ NeedsCompilation: no
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 Encoding: UTF-8
-Packaged: 2023-03-16 23:27:10 UTC; kgates
+Packaged: 2023-03-21 19:32:58 UTC; kgates
 Repository: CRAN
-Date/Publication: 2023-03-16 23:50:02 UTC
+Date/Publication: 2023-03-22 08:30:02 UTC
