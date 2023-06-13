@@ -93,6 +93,12 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     ind_fit    <- round(ind_fit, digits = 4)
     ind_fit[2] <- round(ind_fit[2], digits = 0)
     
+    r2         <- inspect(fit, "rsquare")
+    r2         <- r2[which(r2>0)]
+    names(r2)  <- paste0(names(r2), "_r2")
+    
+    ind_fit    <- c(ind_fit, round(r2, digits = 4))
+    
     ind_vcov_full <- lavInspect(fit, "vcov.std.all")
     keep          <- rownames(ind_vcov_full) %in% dat$candidate_paths
     ind_vcov      <- ind_vcov_full[keep, keep]
@@ -195,6 +201,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
       if(dat$hybrid){
         covpsi     <- ind_psi[(dat$n_lagged+1):(dat$n_vars_total), (dat$n_lagged+1):(dat$n_vars_total)]
         covpsi[lower.tri(covpsi)] <- 0 # so we don't get duplicates
+        diag(covpsi)    <- 0
         plot_vals_psi   <- w2e(covpsi)
         
         plot_file_psi   <- ifelse(dat$agg, 
@@ -222,7 +229,11 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
           plot(ind_plot_psi)
           dev.off()
         }
-      }
+      
+      } else {
+          ind_plot_psi <- NULL
+        }
+      
     }
   } 
   
@@ -253,6 +264,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     ind_betas <- NA
     ind_vcov  <- NA
     ind_plot  <- NA
+    ind_plot_psi <- NA
     ind_psi   <- NA
     ind_psi_unstd   <- NA
     ind_vcov_full <- NA
@@ -263,10 +275,11 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
               "ind_coefs" = ind_coefs, 
               "ind_betas" = ind_betas, 
               "ind_psi"   = ind_psi, 
-              "ind_psi_unstd" = ind_psi_unstd, 
-              "ind_vcov"  = ind_vcov,
+              "ind_psi_unstd"  = ind_psi_unstd, 
+              "ind_vcov"       = ind_vcov,
               "ind_vcov_full"  = ind_vcov_full,
-              "ind_plot"  = ind_plot,
+              "ind_plot"       = ind_plot,
+              "ind_plot_cov"   = ind_plot_psi,
               "ind_syntax" = c(dat$syntax, grp$group_paths,ind$sub_paths[[k]], ind$ind_paths[[k]])
               )
   return(res)

@@ -12,7 +12,7 @@
 
 <meta name="author" content="KM Gates" />
 
-<meta name="date" content="2023-03-21" />
+<meta name="date" content="2023-06-13" />
 
 <title>Group Iterative Multiple Model Estimation (GIMME)</title>
 
@@ -341,15 +341,15 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Group Iterative Multiple Model Estimation
 (GIMME)</h1>
 <h4 class="author">KM Gates</h4>
-<h4 class="date">2023-03-21</h4>
+<h4 class="date">2023-06-13</h4>
 
 
 
 <div id="the-basics" class="section level1">
 <h1><strong>The Basics</strong></h1>
 <ul>
-<li><p>GIMME can be used to estimate the unified SEM (uSEM; Kim et al.,
-2007; Gates et al., 2010).</p></li>
+<li><p>GIMME can be used to estimate the unified SEM, Vector
+Autoregressive (VAR), and hybrid-VAR models.</p></li>
 <li><p>Missing data is not a problem.</p></li>
 <li><p>Heterogeneous data is not a problem:</p>
 <ul>
@@ -369,24 +369,18 @@ R.</p></li>
 </div>
 <div id="running-gimme" class="section level1">
 <h1><strong>Running GIMME</strong></h1>
-<p><strong>1. Create two new folders (i.e., directories)</strong></p>
+<p><strong>1. Extract the time series for your variables</strong></p>
 <ul>
-<li><p>Create a source folder for your time series. This can be anywhere
-that you have permission to read and write.</p></li>
-<li><p>Nothing can be in the source folder other than the time series
-data.</p></li>
-<li><p>Create an output folder for your results. This must be different
-from the above folder.</p></li>
-</ul>
-<p><strong>2. Extract the time series for your variables</strong></p>
-<ul>
-<li><p>Have each variable be a column, with the rows being the
-observation (e.g., scan in fMRI or a day in daily diary
-studies).</p></li>
+<li><p>Create a data frame for each person. Have each variable be a
+column, with the rows being the observation across time (e.g., scans in
+fMRI or days in daily diary studies).</p></li>
+<li><p>Make sure you don’t have any constants, such as ID number. All
+variables must vary across time for each individual.</p></li>
 <li><p>Substitute NA for missing values.</p></li>
-<li><p>Have a separate file for each individual/session.</p></li>
-<li><p>Put each file in the source folder you created in step 1. Do not
-put anything else in this folder.</p></li>
+<li><p>Either put the data frames in an R list object, where each slice
+is a different person’s data frame or save the individuals’ time series
+as separate files (i.e., each person has a file) and put them in a
+folder. Do not put anything else in this folder.</p></li>
 <li><p>Files must be either comma, space, or tab delimited.</p></li>
 </ul>
 <p><strong>3. Installing gimme with R</strong></p>
@@ -397,24 +391,28 @@ put anything else in this folder.</p></li>
 by entering: <code>library(gimme)</code></p></li>
 </ul>
 <p><strong>4. Running gimme</strong> The <em>gimme</em> (or
-equivelantly, <em>gimmeSEM</em>) function requires that you input: 1.
-Source directory 2. How data are separated (e..g, comma-separated
-values) 3. If there is a header</p>
+equivelently, <em>gimmeSEM</em>) function requires that you input: 1.
+Data object (if you put your individual data frames in a list) or source
+directory (if you saved them as seperate files) 2. If you stored them in
+a folder: How data are separated (e..g, comma-separated values) and if
+there is a header</p>
 <p>All other fields are optional and will go to defaults if no user
 input is provided. If no output directory is indicated, all information
 is stored as R objects (see tutorial linked above for details).</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gimme</span>(                  <span class="co"># can use &quot;gimme&quot; or &quot;gimmeSEM&quot;</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="st">&#39;&#39;</span>,          <span class="co"># source directory where your data are </span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">out =</span> <span class="st">&#39;&#39;</span>,           <span class="co"># output directory where you&#39;d like your output to go</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sep =</span> <span class="st">&quot;&quot;</span>,           <span class="co"># how data are separated. &quot;&quot; for space; &quot;,&quot; for comma, &quot;/t&quot; for tab-delimited</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">header =</span> ,          <span class="co"># TRUE or FALSE, is there a header</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ar =</span> <span class="cn">TRUE</span>,          <span class="co"># TRUE (default) or FALSE, start with autoregressive paths open</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot =</span> <span class="cn">TRUE</span>,        <span class="co"># TRUE (default) or FALSE, generate plots</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">subgroup =</span> <span class="cn">FALSE</span>,   <span class="co"># TRUE or FALSE (default), cluster individuals based on similarities in effects</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">paths =</span> <span class="cn">NULL</span>,       <span class="co"># option to list paths that will be group-level (semi-confirmatory)</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">groupcutoff =</span> .<span class="dv">75</span>,  <span class="co"># the proportion that is considered the majority at the group level</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">subcutoff =</span> .<span class="dv">5</span>      <span class="co"># the proportion that is considered the majority at the subgroup level</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    )        </span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">gimme</span>(                  <span class="co"># can use &quot;gimme&quot; or &quot;gimmeSEM&quot;</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>    <span class="at">data =</span> <span class="st">&#39;&#39;</span>,          <span class="co"># list object or source directory where your data are </span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>    <span class="at">out =</span> <span class="st">&#39;&#39;</span>,           <span class="co"># output directory where you&#39;d like your output to go</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>    <span class="at">sep =</span> <span class="st">&quot;&quot;</span>,           <span class="co"># how data are separated. &quot;&quot; for space; &quot;,&quot; for comma, &quot;/t&quot; for tab-delimited</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>    <span class="at">header =</span> ,          <span class="co"># TRUE or FALSE, is there a header</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>    <span class="at">ar =</span> <span class="cn">TRUE</span>,          <span class="co"># TRUE (default) or FALSE, start with autoregressive paths open</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>    <span class="at">plot =</span> <span class="cn">TRUE</span>,        <span class="co"># TRUE (default) or FALSE, generate plots</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>    <span class="at">subgroup =</span> <span class="cn">FALSE</span>,   <span class="co"># TRUE or FALSE (default), cluster individuals based on similarities in effects</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>    <span class="at">paths =</span> <span class="cn">NULL</span>,       <span class="co"># option to list paths that will be group-level (semi-confirmatory)</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>    <span class="at">groupcutoff =</span> .<span class="dv">75</span>,  <span class="co"># the proportion that is considered the majority at the group level</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>    <span class="at">subcutoff =</span> .<span class="dv">75</span>,     <span class="co"># the proportion that is considered the majority at the subgroup level</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>    <span class="at">VAR       =</span> <span class="cn">FALSE</span>,  <span class="co"># TRUE or FALSE (default), option to use VAR model instead of uSEM</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>    <span class="at">hybrid    =</span> <span class="cn">FALSE</span>   <span class="co"># TRUE or FALSE (default), option to use hybrid-VAR model instead of uSEM</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>    )        </span></code></pre></div>
 <p>While <em>gimme</em> is running you will see information iterate in
 the command window. The algorithm will tell you when it is finished.</p>
 </div>
@@ -491,9 +489,11 @@ number of variables (columns) in their data sets. 2. Ensure that all
 variables have variability (i.e., are not constant). <em>gimme</em> will
 let you know if this is the case. 3. Ensure your path directories are
 correct. 4. Ensure that the columns are variables and the rows contain
-the observations across time. 5. If all this is correct, please email
-the error you received, code used to run <em>gimme</em>, and the data
-(we promise not to use it or share it) to: echo <a href="mailto:gimme@unc.edu" class="email">gimme@unc.edu</a>.</p>
+the observations across time. 5. Ensure that variables aren’t perfectly
+correlated (or nearly perfectly correlated) for all individuals. 6. If
+all this is correct, please email the error you received, code used to
+run <em>gimme</em>, and the data (we promise not to use it or share it)
+to: echo <a href="mailto:gimme@unc.edu" class="email">gimme@unc.edu</a>.</p>
 </div>
 
 
