@@ -11,6 +11,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
   
   op  = NULL # appease CRAN check
   ind_plot = NA
+  ind_plot_psi = NA
   
   if (!dat$agg){
     fit <- fit.model(syntax    = c(dat$syntax, 
@@ -66,6 +67,11 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     if (!error){
       converge  <- lavInspect(fit, "converged")
       
+      ind_coefs_unst0 <- parameterEstimates(fit)
+      ind_coefs_unst_idx <- paste0(ind_coefs_unst0$lhs,ind_coefs_unst0$op,ind_coefs_unst0$rhs)
+      ind_coefs_unst <- ind_coefs_unst0[ind_coefs_unst0$op == "~" |
+                                     ind_coefs_unst_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
+      
       ind_coefs0 <- standardizedSolution(fit)
       ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
       ind_coefs <- ind_coefs0[ind_coefs0$op == "~" |
@@ -94,8 +100,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     ind_fit[2] <- round(ind_fit[2], digits = 0)
     
     r2         <- inspect(fit, "rsquare")
-    r2         <- r2[which(round(r2,3)>0)]
-    names(r2)  <- paste0(names(r2), "_r2")
+    r2         <- r2[dat$varLabels$endo]
     
     ind_fit    <- c(ind_fit, round(r2, digits = 4))
     
@@ -103,11 +108,19 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     keep          <- rownames(ind_vcov_full) %in% dat$candidate_paths
     ind_vcov      <- ind_vcov_full[keep, keep]
     
+    ind_coefs_unst0 <- parameterEstimates(fit)
+    ind_coefs_unst_idx <- paste0(ind_coefs_unst0$lhs,ind_coefs_unst0$op,ind_coefs_unst0$rhs)
+    ind_coefs_unst <- ind_coefs_unst0[ind_coefs_unst0$op == "~" |
+                                   ind_coefs_unst_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
     
     ind_coefs0 <- standardizedSolution(fit)
     ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
     ind_coefs <- ind_coefs0[ind_coefs0$op == "~" |
                               ind_coefs_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
+    
+    ind_coefs <- cbind(ind_coefs[,1:3], ind_coefs_unst$est, ind_coefs[,4:9])
+    colnames(ind_coefs) <- c("lhs", "op", "rhs", "est", "est.std", "se", "z", "pvalue", "ci.lower", "ci.upper")
+    
     #ind_coefs <- subset(standardizedSolution(fit), op == "~")
     
     # if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
@@ -152,7 +165,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
       } else if (!dat$agg & !is.null(dat$out)) { # & ind$n_ind_paths[k]>0)
         write.csv(ind_betas, file.path(dat$ind_dir, 
                                        paste0(dat$file_order[k,2], 
-                                              "Betas.csv")), row.names = TRUE)
+                                              "BetasStd.csv")), row.names = TRUE)
         
         # write.csv(ind_vcov_full, file.path(dat$ind_dir, 
         #                                paste0(dat$file_order[k,2], 
@@ -235,7 +248,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
         }
       
       } else {
-          ind_plot_psi <- NULL
+          ind_plot_psi <- NA
         }
       
     }
@@ -263,8 +276,8 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     if (!converge) status <- "nonconvergence"
     if (zero_se)   status <- "computationally singular"
     ind_fit   <- rep(NA, 11)
-    ind_coefs <- matrix(NA, nrow = 1, ncol = 9)
-    colnames(ind_coefs) <- c("lhs", "op", "rhs", "est.std", "se", "z", "pvalue", "ci.lower", "ci.upper")
+    ind_coefs <- matrix(NA, nrow = 1, ncol = 10)
+    colnames(ind_coefs) <- c("lhs", "op", "rhs", "est","est.std", "se.std", "z", "pvalue", "ci.lower.std", "ci.upper.std")
     ind_betas <- NA
     ind_vcov  <- NA
     ind_plot  <- NA

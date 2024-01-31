@@ -96,7 +96,7 @@
 #' @param mean_center_mult Logical. If TRUE, the variables indicated in mult_vars will be mean-centered
 #' before being multiplied together. Defaults to FALSE. 
 #' @param standardize Logical. If TRUE, all variables will be standardized to have a mean of zero and a
-#' standard deviation of one. Defaults to FALSE. 
+#' standard deviation of one. Defaults to FALSE 
 #' @param plot Logical. If TRUE, graphs depicting relations among variables
 #' of interest will automatically be 
 #' created. Solid lines represent contemporaneous relations (lag 0) and dashed lines reflect 
@@ -158,53 +158,7 @@
 #' @param dir_prop_cutoff Option to require that the directionality of a relation has to be higher than the reverse direction for a prespecified proportion of indivdiuals.  
 #' @param ordered A character vector containing the names of all ordered categorical variables in the model.
 #' @details
-#'  In main output directory:
-#'  \itemize{
-#'  \item{\strong{indivPathEstimates}} {Contains estimate, standard error,
-#'  p-value, and z-value for each path for each individual.
-#'  If subgroup = TRUE and subgroups are found, then a column is present
-#'  containing the subgroup membership for each individual. Also contains the
-#'  level at which each path was estimated: group, subgroup, or individual.}
-#'  \item{\strong{summaryFit}} {Contains model fit information for individual-
-#'  level models. If subgroups are requested, this file also contains the
-#'  subgroup membership for each individual.}
-#'  \item{\strong{summaryPathCountMatrix}} Contains counts of total number of
-#'  paths, both contemporaneous and lagged, estimated for the sample. The row
-#'  variable is the outcome and the column variable is the predictor variable.
-#'  \item{\strong{summaryPathCounts}} {Contains summary count information for
-#'  paths identified at the group-, subgroup (if subgroup = TRUE), and
-#'  individual-level.}
-#'  \item{\strong{summaryPathsPlot}} {Produced if plot = TRUE. Contains figure
-#'  with group, subgroup (if subgroup = TRUE), and individual-level paths
-#'  for the sample. Black paths are group-level, green paths are subgroup-level,
-#'  and grey paths are individual-level, where the thickness of the line
-#'  represents the count.}
-#'  }
-#'  In subgroup output directory (if subgroup = TRUE):
-#'  \itemize{
-#'  \item{\strong{subgroup\emph{k}PathCounts}} Contains counts of relations
-#'  among lagged and contemporaneous variables for the \strong{\emph{k}}th
-#'  subgroup.
-#'  \item{\strong{subgroup\emph{k}Plot}} Contains plot of group, subgroup,
-#'  and individual level paths for the \strong{\emph{k}}th subgroup.
-#'  Black represents group-level paths, grey represents individual-level paths,
-#'  and green represents subgroup-level paths.
-#'  }
-#'  Note: if a subgroup of size n = 1 is discovered, subgroup-level output is
-#'  not produced. \cr
-#'  In individual output directory (where \strong{\emph{id}} represents the
-#'  original file name for each individual):
-#'  \itemize{
-#'  \item{\strong{\emph{id}Betas}} Contains individual-level estimates
-#'   of each path for each individual.
-#'  \item{\strong{\emph{id}StdErrors}} Contains individual-level standard errors
-#'  for each path for each individual.
-#'  \item{\strong{\emph{id}EstRF}} Produced if conv_vars is not NULL. 
-#'  Contains individual-level estimated response function (e.g., hemodynamic response function (HRF) or relevant response function).
-#'  One column for each convolved variable, output length is equal to conv_length input.
-#'  \item{\strong{\emph{id}Plot}} Contains individual-level plots. Red paths
-#'  represent positive weights and blue paths represent negative weights.
-#' }
+#'  Output is a list of results if saved as an object and/or files printed to a directory if the "out" argument is used. 
 #' @references Gates, K.M. & Molenaar, P.C.M. (2012). Group search algorithm
 #' recovers effective connectivity maps for individuals
 #' in homogeneous and heterogeneous samples. NeuroImage, 63, 310-319.
@@ -276,11 +230,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
   lvarnames = NULL
   sub_membership = NULL
   
-  arguments <- as.list(sys.frame(which = 1)) 
-  arguments2 <- commandArgs(trailingOnly = TRUE)
-  arguments3 <- commandArgs(trailingOnly = FALSE)
-  
-  
+  arguments <- as.list(sys.frame(which = 1))
 
   setupConvolve = NULL
   ts = NULL
@@ -697,7 +647,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                 psi             = store$psi,
                 psi_unstd       = store$psiunstd,
                 sim_matrix      = sub[[1]]$sim, 
-                syntax          = dat$syntax,
+                syntax          = store$syntax,
                 lvgimme         = dat$lvgimme,
                 rf_est         = dat$rf_est, # 6.19.22 kad: added HRF estimates
                 arguments      = arguments
