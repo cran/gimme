@@ -337,7 +337,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
 
   
   if(!is.null(out)){
-    writeArg <- arguments[(dat$n_subj+1):length(arguments)]
+    writeArg <- arguments
     write.csv(unlist(writeArg), 
               file.path(paste0(out, "/arguments.csv")))
   }
@@ -356,6 +356,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
       stop(paste0("gimme ERROR: confirmatory subgroup assignments are non-numeric.",
                   " Please ensure that the confirmatory subgroup assignments are integer valued, beginning from 1. (Example: 1, 2, 3, 4)"))
     }
+    ### rename to match internal codee for exploratory subgroups
+    colnames(confirm_subgroup) <- c("names","sub_membership")
   }
   
   
@@ -609,7 +611,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        sub = sub[[1]],
                        sub_spec = sub_spec[[1]],
                        diagnos = diagnos,
-                       store)
+                       store,
+                       confirm_subgroup)
     
       writeLines("gimme finished running normally")
       if (!is.null(dat$out)) writeLines(paste("output is stored in", dat$out))

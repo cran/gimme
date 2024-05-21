@@ -7,7 +7,7 @@
 #' @param store A list containing output from indiv.search().
 #' @return Aggregated information, such as counts, levels, and plots.
 #' @keywords internal
-final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
+final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_subgroup){
   
   ind = store$ind
   
@@ -193,11 +193,17 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store){
     fits$status <- do.call(rbind, store$status)
     fits        <- subset(fits, select=c("file", colnames(fits[-which(colnames(fits) == "file")])))
     
-    if (dat$subgroup){
+    if (dat$subgroup & is.null(confirm_subgroup)){
       fits <- merge(fits, sub$sub_mem[ ,c(1,3)], by.x = "file", by.y = "names")  
       fits$modularity <- c(round(sub$modularity, digits = 4), 
                            rep("", (nrow(fits) - 1)))
       indiv_paths <- merge(indiv_paths, sub$sub_mem[ ,c(1,3)], 
+                           by.x = "file", by.y = "names")
+    } else if (!is.null(confirm_subgroup)){
+      fits <- merge(fits, sub$sub_mem[ ,c(1,2)], by.x = "file", by.y = "names")  
+      fits$modularity <- c(round(sub$modularity, digits = 4), 
+                           rep("", (nrow(fits) - 1)))
+      indiv_paths <- merge(indiv_paths, sub$sub_mem[ ,c(1,2)], 
                            by.x = "file", by.y = "names")
     }
     
