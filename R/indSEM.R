@@ -120,6 +120,9 @@ indSEM <- function(data   = NULL,
                 " Please ensure that ar=TRUE if hybrid=TRUE."))
   }
   
+  # set value for unused argument in future code 
+  confirm_subgroup = FALSE
+  
   # so all hybrid-related rules apply, as we are looking at covs of residuals
   if(VAR)
     hybrid = TRUE
@@ -162,6 +165,7 @@ indSEM <- function(data   = NULL,
                      sub      = NULL, 
                      sub_spec = NULL, 
                      diagnos = FALSE,
+                     confirm_subgroup = NULL,
                      store = store)
   
   writeLines("indSEM finished running normally")

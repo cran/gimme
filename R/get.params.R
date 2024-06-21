@@ -1,3 +1,8 @@
+########NOTES: ############
+# test eigen() of each matrix separately 
+# keep testing while this is not stable and >0 ind paths; remove remove etc. until it works
+# Start from scratch and create outline 
+
 #' Grabs final coefficients for each individual.
 #' @param dat A list containing information created in setup().
 #' @param grp A list containing group-level information. NULL in aggSEM and
@@ -13,6 +18,18 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
   ind_plot = NA
   ind_plot_psi = NA
   
+  ###### FUNCTION FOR TESTING FOR STABILITY ######
+  testWeights <- function(fit, dat){
+    ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
+    #added to ensure correct ordering in matrices
+    ind_betas <- ind_betas[dat$varLabels$endo,]
+    ind_betas <- ind_betas[,dat$varLabels$coln]
+    test      <- any(Re(eigen(ind_betas[,1:dat$n_endog])$values)>=1) | 
+      any(Re(eigen(ind_betas[,(dat$n_endog+1):(dat$n_endog*2)])$values)>=1)
+    return(test)
+  }
+  
+  ###### RUN INITIAL FIT ######
   if (!dat$agg){
     fit <- fit.model(syntax    = c(dat$syntax, 
                                    grp$group_paths, 
@@ -29,8 +46,8 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
   }
   
   error   <- inherits(fit, "try-error")
-  
-  if (!error) {
+
+    if (!error) {
     converge <- lavInspect(fit, "converged")
     zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
   } else {
@@ -38,13 +55,24 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     zero_se  <- TRUE
   }
   
-  if (converge & !zero_se)#& (ind$n_ind_paths[k] >0) ){
-    status   <- "converged normally"
-    
-  # if no convergence, roll back one path at individual level, try again 
-  if (!converge | zero_se){
-    status <- "nonconvergence"
-    if (length(ind$ind_paths[[k]]!= 0)){
+  ###### IF NON CONVERGE, ROLL BACK ######
+  
+  if (converge & !zero_se & !testWeights(fit, dat)){
+    status   <- "converged normally" } else {
+  
+  # if no convergence or unstable, roll back one path at individual level, try again 
+  if ((!converge | zero_se | testWeights(fit, dat)) & (length(ind$ind_paths[[k]])!= 0)){
+    keepgoing = TRUE } else if ((!converge | zero_se | testWeights(fit, dat)) & (length(ind$ind_paths[[k]])== 0)) {
+      if (converge & (!testWeights(fit, dat))) # if stable, testWeights(fit) = FALSE
+        status <- "last known convergence"
+      if (testWeights(fit, dat))
+        status <- "unstable solution"
+      if (!converge)
+        status <- "nonconvergence"
+      keepgoing = FALSE
+    }
+  
+    while(keepgoing){
       ind$ind_paths[[k]] <- ind$ind_paths[[k]][-length(ind$ind_paths[[k]])]
       if (!dat$agg){
         fit <- fit.model(syntax    = c(dat$syntax, 
@@ -60,40 +88,28 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
                                               ind$ind_paths[[k]]), 
                                 data_file = data_file)
       }
-    }
-    
-    error   <- inherits(fit, "try-error")
-    
-    if (!error){
-      converge  <- lavInspect(fit, "converged")
-      
-      ind_coefs_unst0 <- parameterEstimates(fit)
-      ind_coefs_unst_idx <- paste0(ind_coefs_unst0$lhs,ind_coefs_unst0$op,ind_coefs_unst0$rhs)
-      ind_coefs_unst <- ind_coefs_unst0[ind_coefs_unst0$op == "~" |
-                                     ind_coefs_unst_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
-      
-      ind_coefs0 <- standardizedSolution(fit)
-      ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
-      ind_coefs <- ind_coefs0[ind_coefs0$op == "~" |
-                                ind_coefs_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
-      #ind_coefs <- ind_coefs0[ind_coefs_idx %in% elig_paths,]
-      #commented out by lan 4.11.2019
-      #ind_coefs <- subset(standardizedSolution(fit), op == "~") # if betas = 0, no SEs
-      if (length(ind_coefs[,1]) > 0){
-        zero_se   <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
+      error   <- inherits(fit, "try-error")
+      if (!error) {
+        converge <- lavInspect(fit, "converged")
+        zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
       } else {
-        zero_se <- FALSE
+        converge <- FALSE
+        zero_se  <- TRUE
       }
-      if (converge){
-        status <- "last known convergence"
-      }
-    } else {
-      converge <- FALSE
-      zero_se  <- TRUE
+      if ((!converge | zero_se | testWeights(fit, dat)) & (length(ind$ind_paths[[k]])!= 0)){
+        keepgoing = TRUE } else if (length(ind$ind_paths[[k]])== 0) {
+          if (converge & (!testWeights(fit, dat))) # if stable, testWeights(fit) = FALSE
+            status <- "last known convergence"
+          if (testWeights(fit, dat))
+            status <- "unstable solution"
+          keepgoing = FALSE
+        }
     }
-  }
+}
   
-  if (converge & !zero_se){#& (ind$n_ind_paths[k] >0) ){
+  ###### COMPILE RESULTS IF CONVERGED ######
+  
+  if (converge & !zero_se){ #& (ind$n_ind_paths[k] >0) ){
     ind_fit    <- fitMeasures(fit, c("chisq", "df", "npar", "pvalue", "rmsea", 
                                      "srmr", "nnfi", "cfi", "bic", "aic", "logl"))
     ind_fit    <- round(ind_fit, digits = 4)
@@ -111,7 +127,7 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     ind_coefs_unst0 <- parameterEstimates(fit)
     ind_coefs_unst_idx <- paste0(ind_coefs_unst0$lhs,ind_coefs_unst0$op,ind_coefs_unst0$rhs)
     ind_coefs_unst <- ind_coefs_unst0[ind_coefs_unst0$op == "~" |
-                                   ind_coefs_unst_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
+                                        ind_coefs_unst_idx %in% c(dat$candidate_paths, dat$candidate_corr),]
     
     ind_coefs0 <- standardizedSolution(fit)
     ind_coefs_idx <- paste0(ind_coefs0$lhs,ind_coefs0$op,ind_coefs0$rhs)
@@ -123,10 +139,9 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
     
     #ind_coefs <- subset(standardizedSolution(fit), op == "~")
     
-    # if (length(ind_coefs[,1]) > 0){ # stl comment out 11.20.17
     ind_betas <- round(lavInspect(fit, "std")$beta, digits = 4)
     ind_ses   <- round(lavInspect(fit, "se")$beta, digits = 4)
-
+    
     #added to ensure correct ordering in matrices
     ind_betas <- ind_betas[dat$varLabels$endo,]
     ind_betas <- ind_betas[,dat$varLabels$coln]
@@ -172,11 +187,11 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
         #                                       "vcov.csv")), row.names = TRUE)
         # zf added 2019-01-23
         write.csv(ind_psi, file.path(dat$ind_dir, 
-                                       paste0(dat$file_order[k,2], 
-                                              "Psi.csv")), row.names = TRUE)
+                                     paste0(dat$file_order[k,2], 
+                                            "Psi.csv")), row.names = TRUE)
         write.csv(ind_psi_unstd, file.path(dat$ind_dir, 
-                                       paste0(dat$file_order[k,2], 
-                                              "PsiUnstd.csv")), row.names = TRUE)
+                                           paste0(dat$file_order[k,2], 
+                                                  "PsiUnstd.csv")), row.names = TRUE)
         write.csv(ind_ses, file.path(dat$ind_dir,
                                      paste0(dat$file_order[k,2], 
                                             "StdErrors.csv")), row.names = TRUE)
@@ -222,9 +237,9 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
         plot_vals_psi   <- w2e(covpsi)
         
         plot_file_psi   <- ifelse(dat$agg, 
-                              file.path(dat$out, "summaryCovPlot.pdf"),
-                              file.path(dat$ind_dir, 
-                                        paste0(dat$file_order[k,2], "PlotCov.pdf")))
+                                  file.path(dat$out, "summaryCovPlot.pdf"),
+                                  file.path(dat$ind_dir, 
+                                            paste0(dat$file_order[k,2], "PlotCov.pdf")))
         
         ind_plot_psi <- try(qgraph(plot_vals_psi,
                                    layout       = "circle",
@@ -246,35 +261,19 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
           plot(ind_plot_psi)
           dev.off()
         }
-      
+        
       } else {
-          ind_plot_psi <- NA
-        }
+        ind_plot_psi <- NA
+      }
       
     }
   } 
   
-  
-  # commented out on 11.20.17 by stl 
-  # if (ind$n_ind_paths[k] ==0 & converge) {
-  #   status     <- "no paths added"
-  #   ind_fit    <- fitMeasures(fit, c("chisq", "df", "npar", "pvalue", "rmsea", 
-  #                                    "srmr", "nnfi", "cfi", "bic", "aic", "logl"))
-  #   ind_fit    <- round(ind_fit, digits = 4)
-  #   ind_fit[2] <- round(ind_fit[2], digits = 0)
-  #   
-  #   ind_vcov  <- lavInspect(fit, "vcov.std.all")
-  #   keep      <- rownames(ind_vcov) %in% dat$candidate_paths
-  #   ind_vcov  <- ind_vcov[keep, keep]
-  #   
-  #   ind_betas <- NULL
-  #   ind_coefs <- subset(standardizedSolution(fit), op == "~")
-  #   
-  # } 
+  ###### COMPILE RESULTS IF NOT CONVERGED ######
   
   if (!converge | zero_se){
     if (!converge) status <- "nonconvergence"
-    if (zero_se)   status <- "computationally singular"
+    if (sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0) status <- "computationally singular"
     ind_fit   <- rep(NA, 11)
     ind_coefs <- matrix(NA, nrow = 1, ncol = 10)
     colnames(ind_coefs) <- c("lhs", "op", "rhs", "est", "est.std", "se", "z", "pvalue", "ci.lower", "ci.upper")
@@ -298,6 +297,6 @@ get.params <- function(dat, grp, ind, k, ms.print = TRUE){
               "ind_plot"       = ind_plot,
               "ind_plot_cov"   = ind_plot_psi,
               "ind_syntax" = c(dat$syntax, grp$group_paths,ind$sub_paths[[k]], ind$ind_paths[[k]])
-              )
+  )
   return(res)
 }

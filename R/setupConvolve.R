@@ -1,5 +1,5 @@
-#' @name convolve
-#' @aliases  convolve setupConvolve
+#' @name setupConvolve
+#' @aliases  convolve convolveFIR
 #' @title Group iterative multiple model estimation.
 #' @description This function estimates the basis vectors related to responses following 
 #' a binary impulse and convolves that binary impulse vector. 
@@ -14,11 +14,11 @@
 #' the names of variables to convolve, and varLabels$exog, a list of exogenous variables (if any).
 #' @param conv_length Expected response length in seconds. For functional MRI BOLD, 16 seconds (default) is typical
 #' for the hemodynamic response function. 
-#' @param conv_interval Interval between data acquisition. Currently must be a constant. For 
+#' @param conv_interval Interval between data acquisition. Currently must be a scalar For 
 #' fMRI studies, this is the repetition time. Defaults to 1. 
 #' @keywords setupConvolve
 #' @export convolveFIR
-convolveFIR <- setupConvolve <- function(ts_list = NULL, 
+setupConvolve <- convolveFIR <- function(ts_list = NULL, 
                           varLabels = NULL, 
                           conv_length = 16, 
                           conv_interval = 1){
