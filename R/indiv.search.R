@@ -4,9 +4,11 @@
 #' indSEM.
 #' @param ind A list containing individual- and (potentially) subgroup-level
 #' information.
+#' @param ind_cutoff Chi square cutoff, .05 level adjusted for multiple tests.
+#' @param ind_z_cutoff  Z score cutoff, .05 level adjusted for multiple tests. 
 #' @return Lists associated with coefficients, fit indices, etc.
 #' @keywords internal 
-indiv.search <- function(dat, grp, ind){
+indiv.search <- function(dat, grp, ind, ind_cutoff = NULL, ind_z_cutoff = 1.96){
   
   if (!dat$agg){
     ind$ind_paths   <-  vector("list", dat$n_subj)
@@ -63,7 +65,7 @@ indiv.search <- function(dat, grp, ind){
                              elig_paths   = elig_paths,
                              prop_cutoff  = NULL,
                              n_subj       = 1,
-                             chisq_cutoff = qchisq(.99, 1)
+                             chisq_cutoff = ind_cutoff
             )
     
     temp_ind_spec <- ind_spec
@@ -76,7 +78,8 @@ indiv.search <- function(dat, grp, ind){
                             n_paths      = ind_spec[[1]][[1]]$n_paths,
                             n_subj       = 1,
                             prop_cutoff  = NULL,
-                            elig_paths   = ind_spec[[1]][[1]]$add_syntax)
+                            elig_paths   = ind_spec[[1]][[1]]$add_syntax,
+                            test_cutoff = ind_z_cutoff)
     
     if (!identical(temp_ind_spec[[1]][[1]]$add_syntax, ind_spec$add_syntax)){
       ind_spec <- search.paths(base_syntax  = dat$syntax, 

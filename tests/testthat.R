@@ -5,8 +5,10 @@
 # Learn more about the roles of various files in:
 # * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
 # * https://testthat.r-lib.org/articles/special-files.html
-
+# 
 # library(testthat)
 # library(gimme)
 # 
 # test_check("gimme")
+
+# readRDS("~/Dropbox/GitHub/gimme/tests/testthat/rds/ex01_raw_data.RDS")

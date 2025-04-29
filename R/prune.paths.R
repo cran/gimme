@@ -19,6 +19,7 @@
 #' gimme is allowed to drop from the model at a given stage.
 #' @param subgroup_stage Logical. Only present in order to instruct gimme
 #' what message to print to console using writeLines.
+#' @param test_cutoff Z score cutoff for significance testing. 
 #' @return Returns updated values of n_paths and add_syntax.
 #' @keywords internal 
 prune.paths <- function(base_syntax, 
@@ -29,7 +30,8 @@ prune.paths <- function(base_syntax,
                         n_subj, 
                         prop_cutoff, 
                         elig_paths, 
-                        subgroup_stage = FALSE){
+                        subgroup_stage = FALSE,
+                        test_cutoff){
   
   #-----------------------------------------------#
   # Determine the stage                           #
@@ -107,7 +109,8 @@ prune.paths <- function(base_syntax,
       drop_param <- lowest.z(z_list,
                              elig_paths  = elig_paths,
                              prop_cutoff = prop_cutoff, 
-                             n_subj      = n_subj)
+                             n_subj      = n_subj, 
+                             test_cutoff = test_cutoff)
     } else {
       drop_param <- NA
     }

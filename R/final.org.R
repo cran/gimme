@@ -5,9 +5,10 @@
 #' @param sub A list containing subgroup information.
 #' @param sub_spec A list containing information specific to each subgroup.
 #' @param store A list containing output from indiv.search().
+#' @param elig_paths if subgroup = TRUE, eligable paths for potential individual-level search 
 #' @return Aggregated information, such as counts, levels, and plots.
 #' @keywords internal
-final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_subgroup){
+final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_subgroup, elig_paths = NULL){
   
   ind = store$ind
   
@@ -18,17 +19,47 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_sub
   if (!dat$agg){
     
     summarize <- summaryPathsCounts(dat, grp, store, sub, sub_spec)
-  
-    ### If path now exists for >= groupcutoff, rerun individual search with it estimated for all
-    if(any(summarize$a$count.ind/dat$n_subj >= dat$group_cutoff)){
-      loc <- which(summarize$a$count.ind/dat$n_subj >= dat$group_cutoff)
-      grp$group_paths <-c(grp$group_paths, paste0(summarize$a$lhs[loc],summarize$a$op[loc], summarize$a$rhs[loc]))
-      if(dat$subgroup){
-        store <- indiv.search(dat, grp, ind[[1]])
-      } else {
-        store <- indiv.search(dat, grp, ind[1])
+    
+    ### If individual-level path now exists for >= subgroupcutoff, add to that subgroup
+    if(dat$subgroup){
+      subsG1 <- which(table(sub$sub_mem$sub_membership)>1)
+      for (p in subsG1){
+        added_sub <- TRUE
+        while(added_sub == TRUE){
+          submatrix <- summarize$summ[which(summarize$summ$level=='ind' & summarize$summ$mem ==p),]
+          add <- submatrix[which(submatrix$count/sub_spec[[p]]$n_sub_subj > dat$sub_cutoff), ]$param
+           if (length(add)>0) {
+            added_sub <- TRUE
+            sub_spec[[p]]$sub_paths <- c(sub_spec[[p]]$sub_paths, add) 
+            id <- which(ind$sub_membership==p)
+            for (t in 1:length(id))
+              ind$sub_paths[[id[t]]] <- sub_spec[[p]]$sub_paths
+            ind_cutoff <- qchisq(1 - .05 / length(elig_paths), 1)
+            ind_z_cutoff <- abs(qnorm(.025 / length(elig_paths)))
+            store <- indiv.search(dat, grp, ind, ind_cutoff, ind_z_cutoff)
+            summarize <- summaryPathsCounts(dat, grp, store, sub, sub_spec)
+          } else {
+            added_sub <- FALSE
+          }
+        }
       }
-      
+    }
+    
+    ### If any path now exists for >= groupcutoff, rerun individual search with it estimated for all
+    if(any((summarize$a$count.ind + summarize$a$count.subgroup)/dat$n_subj >= dat$group_cutoff)){
+      loc <- which((summarize$a$count.ind + summarize$a$count.subgroup)/dat$n_subj >= dat$group_cutoff)
+      grp$group_paths <-c(grp$group_paths, paste0(summarize$a$lhs[loc],summarize$a$op[loc], summarize$a$rhs[loc]))
+      for (p in 1:length(sub_spec)){
+        sub_spec[[p]]$sub_paths <- sub_spec[[p]]$sub_paths[-which(sub_spec[[p]]$sub_paths %in% grp$group_paths)]
+        sub_spec[[p]]$n_sub_paths <- length(sub_spec[[p]]$sub_paths)
+        id <- which(ind$sub_membership==p)
+        for (t in 1:length(id))
+          ind$sub_paths[[id[t]]] <- sub_spec[[p]]$sub_paths
+      }
+      ind_cutoff <- qchisq(1 - .05 / length(elig_paths), 1)
+      ind_z_cutoff <- abs(qnorm(.025 / length(elig_paths)))
+      store <- indiv.search(dat, grp, ind, ind_cutoff, ind_z_cutoff)
+      ind = store$ind
       summarize <- summaryPathsCounts(dat, grp, store, sub, sub_spec)
     }
     
@@ -38,7 +69,7 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_sub
     }
     
     # end creating wide summaryPathCounts ------------------------------------ #
-    
+    if (sum(is.na(summarize$coefs[,1])) < dat$n_subj) {
     b <- aggregate(count ~ lhs + op + rhs + color + label + param, data = summarize$summ, sum)
     b <- transform(b, xcount = ave(count, param, FUN = sum))
     # sorting by count and then dropping duplicated parameters
@@ -242,7 +273,7 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_sub
     sub_plots_cov  = summarize$sub_plots_cov
     sub_counts    = summarize$sub_counts
     sub_counts_cov = summarize$sub_counts_cov
-  } else {
+  } } else {
     # 8.13.22 kad: Create df for paths set to 0 by user if applicable
     zero.paths.df <- NULL
     if(!is.null(dat$zero.paths)){
@@ -293,6 +324,29 @@ final.org <- function(dat, grp, sub, sub_spec, diagnos=FALSE, store, confirm_sub
     sub_counts    = NULL
     sub_counts_cov = NULL
   }
+  
+  ## If no one converged
+  if (!(sum(is.na(summarize$coefs[,1])) < dat$n_subj)) {
+    fits        <- as.data.frame(do.call(rbind, store$fits))
+    fits$file   <- rownames(fits)
+    fits$status <- do.call(rbind, store$status)
+    fits        <- subset(fits, select=c("file", colnames(fits[-which(colnames(fits) == "file")])))
+    
+    if (!is.null(dat$out)){
+      write.csv(fits, file.path(dat$out, "summaryFit.csv"), row.names = FALSE)
+    }
+    
+    indiv_paths    = NULL
+    samp_plot      = NULL
+    samp_plot_cov  = NULL
+    sub_plots      = NULL
+    sub_plots_cov  = NULL
+    sample_counts  = NULL
+    sample_counts_corr =    NULL
+    sub_counts     = NULL
+    sub_counts_cov = NULL
+    dx = NULL}
+  
   
   dx <- list()
   if(diagnos){

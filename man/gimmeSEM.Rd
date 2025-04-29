@@ -39,7 +39,8 @@ gimmeSEM(data        = NULL,
          hybrid = FALSE,
          VAR = FALSE,
          dir_prop_cutoff =0,
-         ordered = NULL)
+         ordered = NULL,
+         group_correct = "Bonferoni Group")
 }
 \arguments{
 \item{data}{The path to the directory where the data files are located,
@@ -194,6 +195,41 @@ search space.  Defaults to FALSE.}
 \item{dir_prop_cutoff}{Option to require that the directionality of a relation has to be higher than the reverse direction for a prespecified proportion of indivdiuals.}
 
 \item{ordered}{A character vector containing the names of all ordered categorical variables in the model.}
+
+\item{group_correct}{Indicate how to correct for multiple testing. "Bonferoni Group" (Default) corrects the alpha value for the number of people (N) in th sample; 
+"Bonferoni Paths" corrects according to the number of eligible paths for that individual; a numeric <1 and >0 can be entered to indicate the alpha level desired.}
+}
+\value{
+A list with the following components: 
+\itemize{
+\item{data: list of data used in analyses. Contains lagged variables and any data manipulations done within gimme.}
+\item{path_est_mats: N matrices of individual-level coefficient estimates for directed paths.}
+\item{varnames: Variable names in order of data.} 
+\item{n_vars_total: total number of variables.}
+\item{n_lagged: total nubmer of lagged varaibles.}
+\item{n_endog: total number of endogenous variables. }
+\item{fit: Final fit indices, R-squared for each variable, convergence status, subgroup membership (if applicable), and modularity (if applicable).}
+\item{path_se_est: Matrix of all individuals' unstandardized & standardized coefficient estimates, standard errors, level of each relation (e.g., "group"), and subgroup membership.}
+\item{plots: If number of variables >3, N individual-level plots of directed lagged and contemporaneous relations among variables. Red = high / hot / positive values; Blue = low / cold / negative values.  Line width corresponds with absolute value of beta estimate. Use plot() function.}  
+\item{plots_cov: If number of variables >3 and hybrid = TRUE or VAR = TRUE, N plots of contemporaneous covariances among residuals.}
+\item{group_plot_paths: If number of variables >3, aggregated plot of directed relations. Black = group-level, Green = subgroup level, Grey = individual level. Line width corresponds with percent of individuals who have that path estimated.} 
+\item{group_plot_cov: If number of variables >3 and hybrid = TRUE or VAR = TRUE, aggregated plot of covariances among residuals.} 
+\item{sub_plots_paths: Aggregated directed subgroup plots for K subgroups if applicable.}
+\item{sub_plots_cov: Aggregated covariance subgroup plots for K subgroups if applicable.}
+\item{path_counts: Matrix containing counts of the number of people for whom a given directed relation is estimated.}
+\item{path_counts_sub: K matrices containing counts of the number of people within that subgroup for whom a given directed relation is estimated.}
+\item{cov_counts: Matrix containing counts of the number of people for whom a given covariance relation is estimated.}
+\item{cov_counts_sub: K matrices containing counts of the number of people within that subgroup for whom a given covariance relation is estimated.}
+\item{vcov: N matrices containing the estimated covariance matrix of paramaters of interest in gimme.}
+\item{vcovfull: N matrices of the full estimated covariance matrix of parameters.}
+\item{psi: N standardized residual covariance matrices.}  
+\item{ps_unstd: N unstandardied residual covariance matrices.}
+\item{sim_matrix: If subgroup = TRUE, similarity count matrix of how many edges are in commong among each pair of individuals after the group-level search (also considers individual-level paths that may be added later via the EPC).}
+\item{syntax: N individual slices containing lavaan-style syntax.}
+\item{lvgimme: If provided, the latent variable model syntax (also included in the above).}
+\item{rf_est: If variables to convolve are provided in conv_vars, the N response function estimates for individuals.}
+\item{arguments: List of arguments provided by the user.}
+}
 }
 \description{
 This function identifies structural equation models for each
