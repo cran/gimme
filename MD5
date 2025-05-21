@@ -1,8 +1,8 @@
-985df0e3ba039bec0ed6790ee6048cc6 *DESCRIPTION
+524f6c2a46f9327e609f631f92fd401a *DESCRIPTION
 a1e39ff7fcdb71d9e7cd18f4dc547e8b *NAMESPACE
 be7a6d9b382dc364861cae56ea812715 *R/aggSEM.R
 4d5becac596a65e2e69e447eb53d41e1 *R/batch.create.tree.R
-14378139a819737b7d8d58e59b5e6094 *R/count.excellent.R
+430be847ef8e93e674829011fce9aae4 *R/count.excellent.R
 e1f2bd9c301f18cfe88b62c020e6ea28 *R/create.tree.R
 bf3a858026f6ef11e0f705ae4573d4dd *R/determine.subgroups.R
 13434fc0c93a0a228e20f267a437789b *R/expand.grid.unique.R
@@ -11,7 +11,7 @@ af4c12ca0f2f3498c315a82778eb7e09 *R/final.org.R
 6f887f8314542d24dc0642e1768092d0 *R/get.params.R
 0474629ca50a12b0bde80e513fdcf3ab *R/gimme-data.R
 a3111dd3fc8e374ea9ea9eef089f90ab *R/gimme-pkg.R
-c483505e56020da2d562ce1f8e8b1e36 *R/gimme.R
+b29cab7f7a47b4606a8ac166fccf778c *R/gimme.R
 4b3162044e0c44f655d139485fe46a85 *R/gimmems.write.R
 b8c0dac3c40c61abd22f30608c452011 *R/highest.mi.R
 abd9812d2b903f159766573333376e77 *R/indSEM.R
@@ -31,7 +31,7 @@ fb4322c1edfdee31d61e2e0bc0b21ebc *R/return.zs.R
 81a520ee63d0b273b9605b83715a0671 *R/sFIR.R
 be988436bbd6fc9e57fc84f5218d1f90 *R/search.paths.R
 ca14142cf39dbf6b7a51d23fdd0f9cf4 *R/search.paths.ms.R
-28c34a8ccd184c64ec889aa17c5aa9c5 *R/setup.R
+b38f6f668d41fbfd653be5d9b631a278 *R/setup.R
 be7f2c737376fa3fec6889afc2238896 *R/setupBaseSyntax.R
 152c6a899d9837dfc14a1dc982aaf254 *R/setupConvolve.R
 af383d4987bdbe591d8dcace36b71e7e *R/setupDataLists.R
@@ -42,7 +42,7 @@ f34ac52cacff5eafa288e8b8a08540de *R/setupPrepPaths.R
 92ae0aa98c51932709000efe4e54c9a6 *R/simulateVAR.R
 256873564f5f021650ee3d863f6396b7 *R/solution.tree.R
 70597081c134373480b6712fe3fd0ec4 *R/sparsity.optimization.R
-36db782c602aebaac98237a21f35fb23 *R/subgroupStage.R
+eb1d5c12089316e617ec8cf727bcb4cd *R/subgroupStage.R
 7a7ea5144067d607e119a2d0698e3c4b *R/summaryPathsCounts.R
 24d1135a67d435076a3fb7c8184be4d9 *R/w2e.R
 afeeb021a1724eb9d1875d4f73df2cb6 *README.md
@@ -54,7 +54,7 @@ d4372c272b942fd5e916478d5bfdf060 *data/simData.rda
 dc39a8090989eb4352574dd6fd4b8863 *data/ts.rda
 2af499747932a771179c1b1cc8a05fa0 *inst/doc/gimme_vignette.R
 0f79d67b4dabbd8a251f3afe67271b62 *inst/doc/gimme_vignette.Rmd
-df094d27f425bdd9f9fbc7f66f665644 *inst/doc/gimme_vignette.html
+0aed581099134c94f02777bf25e542ce *inst/doc/gimme_vignette.html
 e021cf83fe8d6396637a8da6724751b9 *inst/extdata/sysdata.rda
 3bd6491f2237f2ad5c5421edadb12949 *man/HRFsim.Rd
 6788d9037bb925c167b5be53f3982091 *man/aggSEM.Rd
@@ -95,7 +95,7 @@ abe4e1b116e2b82ef1c91bce4b3afdee *man/setupDataLists.Rd
 aca507d0c36ed3baa1f8dcce4abdb9f9 *man/simDataLV.Rd
 93627a75be4cfb36efde422ea349f622 *man/simulateVAR.Rd
 ca70a517c96c0362c0768f911c92afce *man/solution.tree.Rd
-8d57da4cb1b11cb66fdb235e21cdfb72 *man/subgroupStage.Rd
+b295c146996bd61f15cb2fb1b858536b *man/subgroupStage.Rd
 46de64abf2d2badbe4b0a4c97435add9 *man/summaryPathsCounts.Rd
 5cb6c76e9ccfae29d4865846328b555e *man/ts.Rd
 09b09900c2cdf2039e949641e8e24c5a *man/w2e.Rd
