@@ -1,4 +1,4 @@
-524f6c2a46f9327e609f631f92fd401a *DESCRIPTION
+8da7fc97a098e9ebfe1bc47660ae2eb0 *DESCRIPTION
 a1e39ff7fcdb71d9e7cd18f4dc547e8b *NAMESPACE
 be7a6d9b382dc364861cae56ea812715 *R/aggSEM.R
 4d5becac596a65e2e69e447eb53d41e1 *R/batch.create.tree.R
@@ -11,11 +11,11 @@ af4c12ca0f2f3498c315a82778eb7e09 *R/final.org.R
 6f887f8314542d24dc0642e1768092d0 *R/get.params.R
 0474629ca50a12b0bde80e513fdcf3ab *R/gimme-data.R
 a3111dd3fc8e374ea9ea9eef089f90ab *R/gimme-pkg.R
-b29cab7f7a47b4606a8ac166fccf778c *R/gimme.R
+f80fc0dc01908e13bfddf077f59a9d04 *R/gimme.R
 4b3162044e0c44f655d139485fe46a85 *R/gimmems.write.R
 b8c0dac3c40c61abd22f30608c452011 *R/highest.mi.R
 abd9812d2b903f159766573333376e77 *R/indSEM.R
-c64612c74fb2c49071e12a06e860ed3d *R/indiv.search.R
+0c7ff89b420c34709481a5235e99bd0a *R/indiv.search.R
 8acbc68ef4fbe048b403641eaed814e8 *R/indiv.search.ms.R
 dea8277971b388ddf7dd3953ae694507 *R/lowest.z.R
 44459e70bb58289d2f0e7aa81cc6bc7d *R/miiv.aux.R
@@ -31,7 +31,7 @@ fb4322c1edfdee31d61e2e0bc0b21ebc *R/return.zs.R
 81a520ee63d0b273b9605b83715a0671 *R/sFIR.R
 be988436bbd6fc9e57fc84f5218d1f90 *R/search.paths.R
 ca14142cf39dbf6b7a51d23fdd0f9cf4 *R/search.paths.ms.R
-b38f6f668d41fbfd653be5d9b631a278 *R/setup.R
+a10ca8f29fa3508e59d26e26a0673f6c *R/setup.R
 be7f2c737376fa3fec6889afc2238896 *R/setupBaseSyntax.R
 152c6a899d9837dfc14a1dc982aaf254 *R/setupConvolve.R
 af383d4987bdbe591d8dcace36b71e7e *R/setupDataLists.R
@@ -54,7 +54,7 @@ d4372c272b942fd5e916478d5bfdf060 *data/simData.rda
 dc39a8090989eb4352574dd6fd4b8863 *data/ts.rda
 2af499747932a771179c1b1cc8a05fa0 *inst/doc/gimme_vignette.R
 0f79d67b4dabbd8a251f3afe67271b62 *inst/doc/gimme_vignette.Rmd
-0aed581099134c94f02777bf25e542ce *inst/doc/gimme_vignette.html
+498dc4db28b91ea97c830c0ada95fc51 *inst/doc/gimme_vignette.html
 e021cf83fe8d6396637a8da6724751b9 *inst/extdata/sysdata.rda
 3bd6491f2237f2ad5c5421edadb12949 *man/HRFsim.Rd
 6788d9037bb925c167b5be53f3982091 *man/aggSEM.Rd
@@ -110,5 +110,5 @@ feb23a290e3408144e0e78311346bc0e *tests/testthat/rds/run2_path_counts.rds
 b7b5ea6ec3d3369296de10e516c61647 *tests/testthat/rds/run3_path_matrix.rds
 0a9045a1bcdff2bf6aa2ef860a3a18ab *tests/testthat/rds/run4_path_counts.rds
 c781df80d56a32a9b4fad249df1d8a5e *tests/testthat/rds/run4_path_matrix.rds
-79f50edb18c82796f75f8e680e9b1c00 *tests/testthat/test-gimme.R
+455e814d4d273950c0698e750f18e6cb *tests/testthat/test-gimme.R
 0f79d67b4dabbd8a251f3afe67271b62 *vignettes/gimme_vignette.Rmd

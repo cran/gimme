@@ -280,13 +280,6 @@ gimmeSEM <- gimme <- function(data             = NULL,
     writeLines("gimme WARNING: Multiple solutions are not likely when ar=TRUE.",
                 " We recommend setting ar to FALSE if using ms_allow.")
   }
-  
-  # Warning for plot when Variables = 3
-  if(plot == TRUE && (length(data[[1]][1,]) < 4)){
-    writeLines("gimme WARNING: plot=TRUE changed to plot=FALSE.",
-               " Errors in plotting occur with fewer than 4 nodes.")
-    plot = FALSE
-  }
     
   
   #Error check for hybrid
@@ -382,6 +375,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
     writeArg <- arguments[-1]
     write.csv(unlist(writeArg), 
               file.path(paste0(out, "/arguments.csv")))
+    writeLines(capture.output(utils::sessionInfo()), 
+              file.path(paste0(out, "/sessionInfo.txt")))
   }
   
   #Error Check for Confirm Subgroup Labels
@@ -651,7 +646,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
     if(subgroup){
       store <- indiv.search(dat, grp[[1]], ind[[1]], ind_cutoff, ind_z_cutoff)
     } else {
-      store <- indiv.search(dat, grp[[1]], ind[1], ind_cutoff, ind_z_cutoff)
+      store <- indiv.search(dat, grp[[1]], ind, ind_cutoff, ind_z_cutoff)
     }
     
     if(!is.null(lv_model)){
