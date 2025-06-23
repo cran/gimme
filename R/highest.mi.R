@@ -30,6 +30,7 @@ highest.mi <- function(mi_list,
   mi  = NULL # appease CRAN check
   sig = NULL # appease CRAN check
   param  = NULL # appease CRAN check
+  goodfit = NULL
   
   mi_list_na       <- mi_list[!is.na(mi_list)]    # retain list form for later use
   n_converge    <- length(mi_list_na)
@@ -137,18 +138,25 @@ highest.mi <- function(mi_list,
       
     } else {
       
-      add_param <- mi_list_ms$param[1L]
+      add_param <- ifelse(mi_list_ms$sig[1L]==1, mi_list_ms$param[1L], NA) 
       
     }
     
     
-    if (count.excellent(indices) >= 2) {
+    if (n_subj ==1 & count.excellent(indices) >= 2) {
       
       add_param <- NA
       
+      if(count.excellent(indices)>=2)
+        goodfit = TRUE
+      
+    } else if (n_subj == 1) {
+      goodfit = FALSE
+    } else {
+      goodfit = NULL
     }
     
   }
   
-  return(list(add_param=add_param,mi_list=mi_list))
+  return(list(add_param=add_param,mi_list=mi_list, goodfit = goodfit ))
 }
