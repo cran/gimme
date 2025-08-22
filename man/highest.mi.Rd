@@ -14,7 +14,12 @@ highest.mi(
   allow.mult,
   ms_tol,
   hybrid,
-  dir_prop_cutoff
+  dir_prop_cutoff,
+  rmsea_cutoff = 0.05,
+  srmr_cutoff = 0.05,
+  nnfi_cutoff = 0.95,
+  cfi_cutoff = 0.95,
+  n_excellent = 2
 )
 }
 \arguments{
@@ -37,6 +42,17 @@ individual stage, n_subj = 1.}
 \item{chisq_cutoff}{Cutoff used in order for MI to be considered significant.
 Value varies depending on stage of search (e.g., group, subgroup, 
 individual).}
+
+\item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}
+
+\item{srmr_cutoff}{Cutoff for SRMR for an individual model (default is .05; must be between 0.0 and 1.0).}
+
+\item{nnfi_cutoff}{Cutoff for NNFI for an individual model (default is .95; must be between 0.0 and 1.0).}
+
+\item{cfi_cutoff}{Cutoff for CFI for an individual model (default is .95; must be between 0.0 and 1.0).}
+
+\item{n_excellent}{Number of fit indices needed to surpass their cutoffs for an
+individual model to be considered excellent. Default is 2. Max is 4.}
 }
 \value{
 Returns name of parameter associated with highest MI. If no MI meets 

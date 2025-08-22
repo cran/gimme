@@ -39,7 +39,12 @@
 #'          VAR = FALSE,
 #'          dir_prop_cutoff =0,
 #'          ordered = NULL,
-#'          group_correct = "Bonferoni Group")
+#'          group_correct = "Bonferoni Group",
+#'            rmsea_cutoff = .05, 
+#'            srmr_cutoff = .05, 
+#'            nnfi_cutoff = .95,
+#'            cfi_cutoff = .95,
+#'            n_excellent = 2)
 #' @param data The path to the directory where the data files are located,
 #' or the name of the list containing each individual's time series. Each file
 #' or matrix must contain one matrix for each individual containing a T (time)
@@ -160,6 +165,8 @@
 #' @param ordered A character vector containing the names of all ordered categorical variables in the model.
 #' @param group_correct Indicate how to correct for multiple testing. "Bonferoni Group" (Default) corrects the alpha value for the number of people (N) in th sample; 
 #' "Bonferoni Paths" corrects according to the number of eligible paths for that individual; a numeric <1 and >0 can be entered to indicate the alpha level desired.
+#' @inheritParams count.excellent
+#' @inheritParams highest.mi
 #' @details
 #'  Output is a list of results if saved as an object and/or files printed to a directory if the "out" argument is used. 
 #' @references Gates, K.M. & Molenaar, P.C.M. (2012). Group search algorithm
@@ -256,7 +263,12 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               VAR              = FALSE,
                               dir_prop_cutoff  = 0,
                               ordered          = NULL,
-                              group_correct    = "Bonferoni Group"){          
+                              group_correct    = "Bonferoni Group",
+                              rmsea_cutoff = .05,
+                              srmr_cutoff = .05,
+                              nnfi_cutoff = .95,
+                              cfi_cutoff = .95,
+                              n_excellent = 2){          
   arguments <- as.list(sys.frame(which = 1))
   
   # satisfy CRAN checks
@@ -273,14 +285,20 @@ gimmeSEM <- gimme <- function(data             = NULL,
   #Error check for ms_allow
   if(ms_allow & subgroup){
       stop(paste0("gimme ERROR: Subgrouping is not available for ms-gimme.",
-                  " Please ensure that subgroup=FALSE if ms_allow=TRUE"))
+                  " Please ensure that subgroup=FALSE if ms_allow=TRUE", "\n"))
   }
   
   if(ms_allow & ar){
-    writeLines("gimme WARNING: Multiple solutions are not likely when ar=TRUE.",
-                " We recommend setting ar to FALSE if using ms_allow.")
+    cat("gimme WARNING: Multiple solutions are not likely when ar=TRUE.",
+                " We recommend setting ar to FALSE if using ms_allow.", "\n")
   }
     
+  # check of <3 variables and plot = TRUE
+  if(plot == TRUE && (length(data[[1]][1,]) < 4)){
+    cat("gimme WARNING: plot=TRUE changed to plot=FALSE.",
+               " Errors in plotting occur with fewer than 4 nodes.", "\n")
+    plot = FALSE
+  }
   
   #Error check for hybrid
   if(hybrid & !ar){
@@ -292,6 +310,12 @@ gimmeSEM <- gimme <- function(data             = NULL,
   if(VAR & !ar){
     stop(paste0("gimme ERROR: Autoregressive paths have to be open for var-gimme.",
                 " Please ensure that ar=TRUE if var=TRUE."))
+  }
+  
+  #Error check for cutoff valuesf
+  if(any(c(rmsea_cutoff, srmr_cutoff, nnfi_cutoff, cfi_cutoff) < 0 | c(rmsea_cutoff, srmr_cutoff, nnfi_cutoff, cfi_cutoff) >1)) {
+    stop(paste0("gimme ERROR: Check find idex cutoff values.",
+                " Values must be in the 0 to 1 range."))
   }
   
   # so all hybrid-related rules apply, as we are looking at covs of residuals
@@ -644,9 +668,19 @@ gimmeSEM <- gimme <- function(data             = NULL,
     ind_z_cutoff <- abs(qnorm(.05/length(elig_paths)))
     # 2.19.2019 kmg: ind[1]$ returns NULL for subgroups; changed to ind[[1]] here
     if(subgroup){
-      store <- indiv.search(dat, grp[[1]], ind[[1]], ind_cutoff, ind_z_cutoff)
+      store <- indiv.search(dat, grp[[1]], ind[[1]], ind_cutoff, ind_z_cutoff, 
+                            rmsea_cutoff = rmsea_cutoff,
+                            srmr_cutoff = srmr_cutoff,
+                            nnfi_cutoff = nnfi_cutoff,
+                            cfi_cutoff = cfi_cutoff,
+                            n_excellent = n_excellent)
     } else {
-      store <- indiv.search(dat, grp[[1]], ind, ind_cutoff, ind_z_cutoff)
+      store <- indiv.search(dat, grp[[1]], ind, ind_cutoff, ind_z_cutoff, 
+                            rmsea_cutoff = rmsea_cutoff,
+                            srmr_cutoff = srmr_cutoff,
+                            nnfi_cutoff = nnfi_cutoff,
+                            cfi_cutoff = cfi_cutoff,
+                            n_excellent = n_excellent)
     }
     
     if(!is.null(lv_model)){

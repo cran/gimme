@@ -4,10 +4,24 @@
 \alias{count.excellent}
 \title{Counts number of excellent fit indices}
 \usage{
-count.excellent(indices)
+count.excellent(
+  indices,
+  rmsea_cutoff = 0.05,
+  srmr_cutoff = 0.05,
+  nnfi_cutoff = 0.95,
+  cfi_cutoff = 0.95
+)
 }
 \arguments{
 \item{indices}{A vector of fit indices from lavaan.}
+
+\item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}
+
+\item{srmr_cutoff}{Cutoff for SRMR for an individual model (default is .05; must be between 0.0 and 1.0).}
+
+\item{nnfi_cutoff}{Cutoff for NNFI for an individual model (default is .95; must be between 0.0 and 1.0).}
+
+\item{cfi_cutoff}{Cutoff for CFI for an individual model (default is .95; must be between 0.0 and 1.0).}
 }
 \value{
 The number of fit indices that are excellent.

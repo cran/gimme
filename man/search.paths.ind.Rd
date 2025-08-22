@@ -17,7 +17,12 @@ search.paths.ind(
   subgroup_stage,
   hybrid,
   dir_prop_cutoff,
-  ind_z_cutoff
+  ind_z_cutoff,
+  rmsea_cutoff = 0.05,
+  srmr_cutoff = 0.05,
+  nnfi_cutoff = 0.95,
+  cfi_cutoff = 0.95,
+  n_excellent = 2
 )
 }
 \arguments{
@@ -51,6 +56,17 @@ individual).}
 
 \item{subgroup_stage}{Logical. Only present in order to instruct gimme
 what message to print to console using writeLines.}
+
+\item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}
+
+\item{srmr_cutoff}{Cutoff for SRMR for an individual model (default is .05; must be between 0.0 and 1.0).}
+
+\item{nnfi_cutoff}{Cutoff for NNFI for an individual model (default is .95; must be between 0.0 and 1.0).}
+
+\item{cfi_cutoff}{Cutoff for CFI for an individual model (default is .95; must be between 0.0 and 1.0).}
+
+\item{n_excellent}{Number of fit indices needed to surpass their cutoffs for an
+individual model to be considered excellent. Default is 2. Max is 4.}
 }
 \value{
 Returns updated values of n_paths and add_syntax.
