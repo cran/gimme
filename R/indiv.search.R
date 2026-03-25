@@ -6,6 +6,7 @@
 #' information.
 #' @param ind_cutoff Chi square cutoff, .05 level adjusted for multiple tests.
 #' @param ind_z_cutoff  Z score cutoff, .05 level adjusted for multiple tests. 
+#' @param stop_crit Stopping criterion for the individual-level search.
 #' @inheritParams count.excellent
 #' @inheritParams highest.mi
 #' @return Lists associated with coefficients, fit indices, etc.
@@ -15,6 +16,7 @@ indiv.search <- function(dat,
                          ind,
                          ind_cutoff = NULL,
                          ind_z_cutoff = 1.96,
+                         stop_crit = "standard",
                          rmsea_cutoff = .05,
                          srmr_cutoff = .05,
                          nnfi_cutoff = .95,
@@ -81,6 +83,7 @@ indiv.search <- function(dat,
                              prop_cutoff  = NULL,
                              n_subj       = 1,
                              chisq_cutoff = ind_cutoff,
+                             stop_crit    = stop_crit,
                              ind_z_cutoff  = ind_z_cutoff,
                              rmsea_cutoff = rmsea_cutoff,
                              srmr_cutoff  = srmr_cutoff,

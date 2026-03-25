@@ -11,6 +11,7 @@ highest.mi(
   prop_cutoff,
   n_subj,
   chisq_cutoff,
+  stop_crit = "standard",
   allow.mult,
   ms_tol,
   hybrid,
@@ -42,6 +43,12 @@ individual stage, n_subj = 1.}
 \item{chisq_cutoff}{Cutoff used in order for MI to be considered significant.
 Value varies depending on stage of search (e.g., group, subgroup, 
 individual).}
+
+\item{stop_crit}{Stopping criterion for the individual-level search.
+"standard" stops when fit is adequate or no significant paths remain.
+"model fit" continues adding the highest-MI path until fit is adequate,
+even if the path is not significant. "significance" continues adding
+significant paths even after fit is adequate.}
 
 \item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}
 

@@ -71,3 +71,68 @@
 #   expect_identical(run4[["path_counts"]], run4_paths_sot)
 # })
 
+test_that("highest.mi standard stop_crit stops once fit is adequate", {
+  mi_list <- list(data.frame(lhs = "y", op = "~", rhs = "x", mi = 5, epc = 0.2))
+  indices <- c(chisq = 1, df = 1, pvalue = .1, rmsea = .01, srmr = .01, nnfi = .99, cfi = .99)
+  
+  res <- gimme:::highest.mi(
+    mi_list = mi_list,
+    indices = indices,
+    elig_paths = "y~x",
+    prop_cutoff = NULL,
+    n_subj = 1,
+    chisq_cutoff = 3.84,
+    stop_crit = "standard",
+    allow.mult = FALSE,
+    ms_tol = 1e-5,
+    hybrid = FALSE,
+    dir_prop_cutoff = 0
+  )
+  
+  expect_true(isTRUE(res$goodfit))
+  expect_true(is.na(res$add_param))
+})
+
+test_that("highest.mi model fit stop_crit can add a nonsignificant path", {
+  mi_list <- list(data.frame(lhs = "y", op = "~", rhs = "x", mi = 2, epc = 0.2))
+  indices <- c(chisq = 10, df = 1, pvalue = .001, rmsea = .20, srmr = .20, nnfi = .50, cfi = .50)
+  
+  res <- gimme:::highest.mi(
+    mi_list = mi_list,
+    indices = indices,
+    elig_paths = "y~x",
+    prop_cutoff = NULL,
+    n_subj = 1,
+    chisq_cutoff = 3.84,
+    stop_crit = "model fit",
+    allow.mult = FALSE,
+    ms_tol = 1e-5,
+    hybrid = FALSE,
+    dir_prop_cutoff = 0
+  )
+  
+  expect_false(isTRUE(res$goodfit))
+  expect_identical(res$add_param, "y~x")
+})
+
+test_that("highest.mi significance stop_crit keeps adding significant paths", {
+  mi_list <- list(data.frame(lhs = "y", op = "~", rhs = "x", mi = 5, epc = 0.2))
+  indices <- c(chisq = 1, df = 1, pvalue = .1, rmsea = .01, srmr = .01, nnfi = .99, cfi = .99)
+  
+  res <- gimme:::highest.mi(
+    mi_list = mi_list,
+    indices = indices,
+    elig_paths = "y~x",
+    prop_cutoff = NULL,
+    n_subj = 1,
+    chisq_cutoff = 3.84,
+    stop_crit = "significance",
+    allow.mult = FALSE,
+    ms_tol = 1e-5,
+    hybrid = FALSE,
+    dir_prop_cutoff = 0
+  )
+  
+  expect_true(isTRUE(res$goodfit))
+  expect_identical(res$add_param, "y~x")
+})

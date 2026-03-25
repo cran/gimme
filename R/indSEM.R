@@ -19,6 +19,7 @@
 #'        mult_vars        = NULL,
 #'        mean_center_mult = FALSE,
 #'        standardize      = FALSE,
+#'        stop_crit        = "standard",
 #'        hybrid = FALSE,
 #'        VAR    = FALSE)
 #' @param data The path to the directory where the data files are located, 
@@ -77,6 +78,11 @@
 #' before being multiplied together. Defaults to FALSE. 
 #' @param standardize Logical. If TRUE, all variables will be standardized to have a mean of zero and a
 #' standard deviation of one. Defaults to FALSE. 
+#' @param stop_crit Stopping criterion for the individual-level search.
+#' "standard" (default) stops when either fit is adequate or no significant
+#' paths remain. "model fit" continues adding the highest-MI path until fit
+#' is adequate, even if the path is not significant. "significance"
+#' continues adding significant paths even after fit is adequate.
 #' @param hybrid Logical. If TRUE, enables hybrid-VAR models where both directed contemporaneous paths and contemporaneous 	
 #' covariances among residuals are candidate relations in the search space. Defaults to FALSE.
 #' @param VAR Logical.  If true, VAR models where contemporaneous covariances among residuals are candidate relations in the 
@@ -111,6 +117,7 @@ indSEM <- function(data   = NULL,
                    mult_vars      = NULL,
                    mean_center_mult = FALSE,
                    standardize    = FALSE,
+                   stop_crit      = "standard",
                    hybrid = FALSE,
                    VAR    = FALSE){
   
@@ -126,6 +133,8 @@ indSEM <- function(data   = NULL,
   # so all hybrid-related rules apply, as we are looking at covs of residuals
   if(VAR)
     hybrid = TRUE
+  
+  stop_crit <- match.arg(stop_crit, c("standard", "model fit", "significance"))
   
   dat  <- setup(data        = data,
                 sep         = sep,
@@ -147,6 +156,7 @@ indSEM <- function(data   = NULL,
                 subgroup    = FALSE,
                 ind         = TRUE,
                 agg         = FALSE,
+                stop_crit   = stop_crit,
                 hybrid      = hybrid,
                 VAR         = VAR,
                 ##added ordered = ordered here to reflect the changes made in other code. lan 3.4.2022
@@ -168,6 +178,7 @@ indSEM <- function(data   = NULL,
                         grp = NULL, 
                         ind = dat$file_order,
                         ind_cutoff = ind_cutoff,
+                        stop_crit = stop_crit,
                         ind_z_cutoff = ind_z_cutoff)
 
   final <- final.org(dat, 
@@ -206,4 +217,3 @@ indSEM <- function(data   = NULL,
   
   invisible(res)
 }
-

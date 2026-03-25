@@ -19,6 +19,7 @@ indSEM(data   = NULL,
        mult_vars        = NULL,
        mean_center_mult = FALSE,
        standardize      = FALSE,
+       stop_crit        = "standard",
        hybrid = FALSE,
        VAR    = FALSE)
 }
@@ -93,6 +94,12 @@ before being multiplied together. Defaults to FALSE.}
 
 \item{standardize}{Logical. If TRUE, all variables will be standardized to have a mean of zero and a
 standard deviation of one. Defaults to FALSE.}
+
+\item{stop_crit}{Stopping criterion for the individual-level search.
+"standard" (default) stops when either fit is adequate or no significant
+paths remain. "model fit" continues adding the highest-MI path until fit
+is adequate, even if the path is not significant. "significance"
+continues adding significant paths even after fit is adequate.}
 
 \item{hybrid}{Logical. If TRUE, enables hybrid-VAR models where both directed contemporaneous paths and contemporaneous
 covariances among residuals are candidate relations in the search space. Defaults to FALSE.}

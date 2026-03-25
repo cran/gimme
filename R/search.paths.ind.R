@@ -20,6 +20,7 @@
 #' individual).
 #' @param subgroup_stage Logical. Only present in order to instruct gimme
 #' what message to print to console using writeLines.
+#' @param stop_crit Stopping criterion for the individual-level search.
 #' @inheritParams count.excellent
 #' @inheritParams highest.mi
 #' @return Returns updated values of n_paths and add_syntax.
@@ -33,6 +34,7 @@ search.paths.ind <- function(dat,
                              prop_cutoff, 
                              n_subj, 
                              chisq_cutoff,
+                             stop_crit = "standard",
                              subgroup_stage,
                              hybrid,
                              dir_prop_cutoff,
@@ -125,6 +127,7 @@ search.paths.ind <- function(dat,
                               prop_cutoff  = prop_cutoff, 
                               n_subj       = n_subj,
                               chisq_cutoff = chisq_cutoff,
+                              stop_crit    = stop_crit,
                               allow.mult   = FALSE,
                               hybrid       = hybrid, 
                               dir_prop_cutoff = dir_prop_cutoff,
@@ -319,6 +322,7 @@ search.paths.ind <- function(dat,
                                 prop_cutoff  = prop_cutoff, 
                                 n_subj       = n_subj,
                                 chisq_cutoff = chisq_cutoff,
+                                stop_crit    = stop_crit,
                                 allow.mult   = FALSE,
                                 hybrid       = hybrid, 
                                 dir_prop_cutoff = dir_prop_cutoff,
@@ -421,6 +425,7 @@ search.paths.ind <- function(dat,
                                   prop_cutoff  = prop_cutoff, 
                                   n_subj       = n_subj,
                                   chisq_cutoff = chisq_cutoff,
+                                  stop_crit    = stop_crit,
                                   allow.mult   = FALSE,
                                   hybrid       = hybrid, 
                                   dir_prop_cutoff = dir_prop_cutoff,

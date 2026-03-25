@@ -40,6 +40,7 @@
 #'          dir_prop_cutoff =0,
 #'          ordered = NULL,
 #'          group_correct = "Bonferoni Group",
+#'          stop_crit = "standard",
 #'            rmsea_cutoff = .05, 
 #'            srmr_cutoff = .05, 
 #'            nnfi_cutoff = .95,
@@ -165,9 +166,17 @@
 #' @param ordered A character vector containing the names of all ordered categorical variables in the model.
 #' @param group_correct Indicate how to correct for multiple testing. "Bonferoni Group" (Default) corrects the alpha value for the number of people (N) in th sample; 
 #' "Bonferoni Paths" corrects according to the number of eligible paths for that individual; a numeric <1 and >0 can be entered to indicate the alpha level desired.
+#' @param stop_crit Stopping criterion for the individual-level search.
+#' "standard" (default) stops when either fit is adequate or no significant
+#' paths remain. "model fit" continues adding the paths until fit
+#' is adequate regardless of signficance of those paths. "significance"
+#' continues adding significant paths even after fit is adequate.
 #' @inheritParams count.excellent
 #' @inheritParams highest.mi
-#' @details
+#' @details gimmeSEM is a data-driven method for identifying structural equation models for each individual that consist of both group-level and individual-level paths. 
+#' The group-level search identifies paths that are significant across a prespecified proportion of individuals in the sample (e.g., 75\%). 
+#' The optional subgrouping stage identifies subgroups of individuals with similar model features (e.g., similar patterns of lagged and contemporaneous relations among variables). 
+#' The individual-level search then adds paths to each individual's model until fit is adequate or no significant paths remain.
 #'  Output is a list of results if saved as an object and/or files printed to a directory if the "out" argument is used. 
 #' @references Gates, K.M. & Molenaar, P.C.M. (2012). Group search algorithm
 #' recovers effective connectivity maps for individuals
@@ -264,6 +273,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                               dir_prop_cutoff  = 0,
                               ordered          = NULL,
                               group_correct    = "Bonferoni Group",
+                              stop_crit        = "standard",
                               rmsea_cutoff = .05,
                               srmr_cutoff = .05,
                               nnfi_cutoff = .95,
@@ -292,7 +302,8 @@ gimmeSEM <- gimme <- function(data             = NULL,
     cat("gimme WARNING: Multiple solutions are not likely when ar=TRUE.",
                 " We recommend setting ar to FALSE if using ms_allow.", "\n")
   }
-    
+  
+  stop_crit <- match.arg(stop_crit, c("standard", "model fit", "significance"))
   
   #Error check for hybrid
   if(hybrid & !ar){
@@ -375,6 +386,7 @@ gimmeSEM <- gimme <- function(data             = NULL,
                        ind                  = FALSE,
                        agg                  = FALSE,
                        groupcutoff          = groupcutoff,
+                       stop_crit            = stop_crit,
                        subcutoff            = subcutoff,
                        conv_vars            = conv_vars, 
                        conv_length          = conv_length, 
@@ -668,14 +680,16 @@ gimmeSEM <- gimme <- function(data             = NULL,
     ind_z_cutoff <- abs(qnorm(.05/length(elig_paths)))
     # 2.19.2019 kmg: ind[1]$ returns NULL for subgroups; changed to ind[[1]] here
     if(subgroup){
-      store <- indiv.search(dat, grp[[1]], ind[[1]], ind_cutoff, ind_z_cutoff, 
+      store <- indiv.search(dat, grp[[1]], ind[[1]], ind_cutoff, ind_z_cutoff,
+                            stop_crit = stop_crit,
                             rmsea_cutoff = rmsea_cutoff,
                             srmr_cutoff = srmr_cutoff,
                             nnfi_cutoff = nnfi_cutoff,
                             cfi_cutoff = cfi_cutoff,
                             n_excellent = n_excellent)
     } else {
-      store <- indiv.search(dat, grp[[1]], ind, ind_cutoff, ind_z_cutoff, 
+      store <- indiv.search(dat, grp[[1]], ind, ind_cutoff, ind_z_cutoff,
+                            stop_crit = stop_crit,
                             rmsea_cutoff = rmsea_cutoff,
                             srmr_cutoff = srmr_cutoff,
                             nnfi_cutoff = nnfi_cutoff,
@@ -797,4 +811,3 @@ gimmeSEM <- gimme <- function(data             = NULL,
   }
   
 }
-

@@ -41,6 +41,7 @@ gimmeSEM(data        = NULL,
          dir_prop_cutoff =0,
          ordered = NULL,
          group_correct = "Bonferoni Group",
+         stop_crit = "standard",
            rmsea_cutoff = .05, 
            srmr_cutoff = .05, 
            nnfi_cutoff = .95,
@@ -204,6 +205,12 @@ search space.  Defaults to FALSE.}
 \item{group_correct}{Indicate how to correct for multiple testing. "Bonferoni Group" (Default) corrects the alpha value for the number of people (N) in th sample; 
 "Bonferoni Paths" corrects according to the number of eligible paths for that individual; a numeric <1 and >0 can be entered to indicate the alpha level desired.}
 
+\item{stop_crit}{Stopping criterion for the individual-level search.
+"standard" (default) stops when either fit is adequate or no significant
+paths remain. "model fit" continues adding the paths until fit
+is adequate regardless of signficance of those paths. "significance"
+continues adding significant paths even after fit is adequate.}
+
 \item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}
 
 \item{srmr_cutoff}{Cutoff for SRMR for an individual model (default is .05; must be between 0.0 and 1.0).}
@@ -252,7 +259,11 @@ This function identifies structural equation models for each
 individual that consist of both group-level and individual-level paths.
 }
 \details{
-Output is a list of results if saved as an object and/or files printed to a directory if the "out" argument is used.
+gimmeSEM is a data-driven method for identifying structural equation models for each individual that consist of both group-level and individual-level paths. 
+The group-level search identifies paths that are significant across a prespecified proportion of individuals in the sample (e.g., 75\%). 
+The optional subgrouping stage identifies subgroups of individuals with similar model features (e.g., similar patterns of lagged and contemporaneous relations among variables). 
+The individual-level search then adds paths to each individual's model until fit is adequate or no significant paths remain.
+ Output is a list of results if saved as an object and/or files printed to a directory if the "out" argument is used.
 }
 \examples{
  \dontrun{

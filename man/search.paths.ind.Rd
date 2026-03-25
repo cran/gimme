@@ -14,6 +14,7 @@ search.paths.ind(
   prop_cutoff,
   n_subj,
   chisq_cutoff,
+  stop_crit = "standard",
   subgroup_stage,
   hybrid,
   dir_prop_cutoff,
@@ -53,6 +54,8 @@ individual stage, n_subj = 1.}
 \item{chisq_cutoff}{Cutoff used in order for MI to be considered significant.
 Value varies depending on stage of search (e.g., group, subgroup, 
 individual).}
+
+\item{stop_crit}{Stopping criterion for the individual-level search.}
 
 \item{subgroup_stage}{Logical. Only present in order to instruct gimme
 what message to print to console using writeLines.}

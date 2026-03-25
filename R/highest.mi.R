@@ -13,6 +13,11 @@
 #' @param chisq_cutoff Cutoff used in order for MI to be considered significant.
 #' Value varies depending on stage of search (e.g., group, subgroup, 
 #' individual).
+#' @param stop_crit Stopping criterion for the individual-level search.
+#' "standard" stops when fit is adequate or no significant paths remain.
+#' "model fit" continues adding the highest-MI path until fit is adequate,
+#' even if the path is not significant. "significance" continues adding
+#' significant paths even after fit is adequate.
 #' @param n_excellent Number of fit indices needed to surpass their cutoffs for an
 #' individual model to be considered excellent. Default is 2. Max is 4. 
 #' @inheritParams count.excellent
@@ -25,6 +30,7 @@ highest.mi <- function(mi_list,
                        prop_cutoff, 
                        n_subj,
                        chisq_cutoff,
+                       stop_crit = "standard",
                        allow.mult,
                        ms_tol,
                        hybrid,
@@ -133,6 +139,19 @@ highest.mi <- function(mi_list,
     # Individual search ongoing...
     #------------------------------------------------------#
   } else {
+    if (!stop_crit %in% c("standard", "model fit", "significance")) {
+      stop("gimme ERROR: stop_crit must be one of 'standard', 'model fit', or 'significance'.")
+    }
+    
+    if (n_subj == 1) {
+      goodfit <- count.excellent(indices,
+                                 rmsea_cutoff,
+                                 srmr_cutoff,
+                                 nnfi_cutoff,
+                                 cfi_cutoff) >= n_excellent
+    } else {
+      goodfit <- NULL
+    }
     
     
     if(allow.mult){
@@ -145,31 +164,21 @@ highest.mi <- function(mi_list,
       }))
       
     } else {
-      
-      add_param <- ifelse(mi_list_ms$sig[1L]==1, mi_list_ms$param[1L], NA) 
+      if (identical(stop_crit, "model fit") && (is.null(goodfit) || !goodfit)) {
+        add_param <- mi_list_ms$param[1L]
+      } else {
+        add_param <- ifelse(mi_list_ms$sig[1L] == 1, mi_list_ms$param[1L], NA)
+      }
       
     }
     
     
-    if (n_subj ==1 & count.excellent(indices,
-                                     rmsea_cutoff,
-                                     srmr_cutoff,
-                                     nnfi_cutoff,
-                                     cfi_cutoff) >= n_excellent) {
-      
+    if (n_subj == 1 && identical(stop_crit, "standard") && goodfit) {
       add_param <- NA
-      
-      if(count.excellent(indices,
-                         rmsea_cutoff,
-                         srmr_cutoff,
-                         nnfi_cutoff,
-                         cfi_cutoff) >= n_excellent)
-        goodfit = TRUE
-      
-    } else if (n_subj == 1) {
-      goodfit = FALSE
-    } else {
-      goodfit = NULL
+    }
+    
+    if (n_subj == 1 && identical(stop_crit, "model fit") && goodfit) {
+      add_param <- NA
     }
     
   }
