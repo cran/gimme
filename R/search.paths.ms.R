@@ -20,19 +20,21 @@
 #' what message to print to console using writeLines.
 #' @return Returns updated values of n_paths and add_syntax.
 #' @keywords internal 
-search.paths.ms <- function(obj, 
+search.paths.ms <- function(obj,
                             data_list,
-                            base_syntax, 
+                            base_syntax,
                             fixed_syntax,
-                            elig_paths, 
-                            prop_cutoff, 
-                            n_subj, 
+                            elig_paths,
+                            prop_cutoff,
+                            n_subj,
                             chisq_cutoff,
                             subgroup_stage,
                             ms_allow,
                             ms_tol,
                             hybrid,
-                            dir_prop_cutoff){
+                            dir_prop_cutoff,
+                            alpha = .05,
+                            correction = "Bonferroni"){
   
   
   #-----------------------------------------------#
@@ -118,24 +120,28 @@ search.paths.ms <- function(obj,
           add_p     <- highest.mi(mi_list      = mi_list,
                                   indices      = indices,
                                   elig_paths   = elig_paths,
-                                  prop_cutoff  = prop_cutoff, 
+                                  prop_cutoff  = prop_cutoff,
                                   n_subj       = n_subj,
                                   chisq_cutoff = chisq_cutoff,
                                   allow.mult   = TRUE,
                                   ms_tol       = ms_tol,
                                   hybrid       = hybrid,
-                                  dir_prop_cutoff = dir_prop_cutoff)
+                                  dir_prop_cutoff = dir_prop_cutoff,
+                                  alpha        = alpha,
+                                  correction   = correction)
           if (!ms_allow)
             add_p     <- highest.mi(mi_list      = mi_list,
                                     indices      = indices,
                                     elig_paths   = elig_paths,
-                                    prop_cutoff  = prop_cutoff, 
+                                    prop_cutoff  = prop_cutoff,
                                     n_subj       = n_subj,
                                     chisq_cutoff = chisq_cutoff,
                                     allow.mult   = FALSE,
                                     ms_tol       = ms_tol,
-                                    hybrid       = hybrid, 
-                                    dir_prop_cutoff = dir_prop_cutoff)
+                                    hybrid       = hybrid,
+                                    dir_prop_cutoff = dir_prop_cutoff,
+                                    alpha        = alpha,
+                                    correction   = correction)
           
           add_param <- add_p$add_param
           mi_info   <- add_p$mi_list

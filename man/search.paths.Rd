@@ -17,8 +17,10 @@ search.paths(
   subgroup_stage = FALSE,
   ms_allow = FALSE,
   ms_tol = 1e-06,
-  hybrid = F,
-  dir_prop_cutoff = 0
+  hybrid = FALSE,
+  dir_prop_cutoff = 0,
+  alpha = 0.05,
+  correction = "Bonferroni"
 )
 }
 \arguments{

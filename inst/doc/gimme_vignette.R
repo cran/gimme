@@ -10,7 +10,7 @@
 #      paths = NULL,       # option to list paths that will be group-level (semi-confirmatory)
 #      groupcutoff = .75,  # the proportion that is considered the majority at the group level
 #      subcutoff = .75,     # the proportion that is considered the majority at the subgroup level
-#      stop_crit = "standard", # "standard", "model fit", or "significance"
+#      stop_crit = "model fit", # "standard", "model fit", or "significance"
 #      VAR       = FALSE,  # TRUE or FALSE (default), option to use VAR model instead of uSEM
 #      hybrid    = FALSE   # TRUE or FALSE (default), option to use hybrid-VAR model instead of uSEM
 #      )

@@ -27,12 +27,12 @@
 #' @keywords internal 
 search.paths.ind <- function(dat,
                              k,
-                            data_list,
-                             base_syntax, 
+                             data_list,
+                             base_syntax,
                              fixed_syntax,
-                             elig_paths, 
-                             prop_cutoff, 
-                             n_subj, 
+                             elig_paths,
+                             prop_cutoff,
+                             n_subj,
                              chisq_cutoff,
                              stop_crit = "standard",
                              subgroup_stage,
@@ -43,7 +43,9 @@ search.paths.ind <- function(dat,
                              srmr_cutoff = .05,
                              nnfi_cutoff = .95,
                              cfi_cutoff = .95,
-                             n_excellent = 2){
+                             n_excellent = 2,
+                             alpha = .05,
+                             indiv_correct = "Bonferroni"){
   
   #-----------------------------------------------------------#
   ##### FUNCTION FOR TESTING FOR STABILITY #####
@@ -124,18 +126,20 @@ search.paths.ind <- function(dat,
       add_p     <- highest.mi(mi_list      = mi_list,
                               indices      = indices,
                               elig_paths   = elig_paths,
-                              prop_cutoff  = prop_cutoff, 
+                              prop_cutoff  = prop_cutoff,
                               n_subj       = n_subj,
                               chisq_cutoff = chisq_cutoff,
                               stop_crit    = stop_crit,
                               allow.mult   = FALSE,
-                              hybrid       = hybrid, 
+                              hybrid       = hybrid,
                               dir_prop_cutoff = dir_prop_cutoff,
                               rmsea_cutoff = rmsea_cutoff,
-                              srmr_cutoff = srmr_cutoff,
-                              nnfi_cutoff = nnfi_cutoff,
-                              cfi_cutoff = cfi_cutoff,
-                              n_excellent = n_excellent)
+                              srmr_cutoff  = srmr_cutoff,
+                              nnfi_cutoff  = nnfi_cutoff,
+                              cfi_cutoff   = cfi_cutoff,
+                              n_excellent  = n_excellent,
+                              alpha        = alpha,
+                              correction   = indiv_correct)
       
       add_param <- add_p$add_param
       mi_info   <- add_p$mi_list
@@ -185,10 +189,11 @@ search.paths.ind <- function(dat,
   ###### IF NON CONVERGE, ROLL BACK, THEN PRUNE, REPEAT ######
   #-----------------------------------------------------------#
   
-  pruned  <- TRUE # keep going if pruned after 1st convergence test, so then new fit is evaluated 
+  pruned  <- TRUE # keep going if pruned after 1st convergence test, so then new fit is evaluated
   nonconv <- TRUE
   nonconv_path <- NULL
   dropped_param <- NULL
+  initial_prune_done <- FALSE
   
   # the below while loop first checks convergence, then prunes, then adds paths if eligible, then repeats
   while(pruned | nonconv){ # note: nonconverge only remains true if prune or additional paths added 
@@ -255,38 +260,43 @@ search.paths.ind <- function(dat,
     #### PRUNE #####
     #-----------------------------------------------------------#
     
+    # For stop_crit = "model fit", only allow one prune pass (matching v0.8.2 behavior).
+    # After the first prune, skip re-pruning to avoid an add→prune→add infinite cycle.
+    if (identical(stop_crit, "model fit") && initial_prune_done) {
+      pruned <- FALSE
+    } else {
     pruned <- FALSE # so we don't end up in a forever loop; prune again to test convergence again above
     prune <- TRUE
-    
+
     z_list <- list()
 
-    while(prune){ 
+    while(prune){
       if (lavaan::lavInspect(fit, "converged")){
         z_list <- list()
         z_list[[1]] <- return.zs(fit, elig_paths)
         if(!all(is.na(z_list))){
           drop_param <- lowest.z(z_list,
                                  elig_paths  =   obj[[1]]$add_syntax,
-                                 prop_cutoff = prop_cutoff, 
-                                 n_subj      = n_subj, 
+                                 prop_cutoff = prop_cutoff,
+                                 n_subj      = n_subj,
                                  test_cutoff = ind_z_cutoff)
         } else {
           drop_param <- NA
         }
-        
+
         if (!is.na(drop_param)){
-          pruned <- TRUE 
+          pruned <- TRUE
           dropped_param <- c(dropped_param, drop_param)
-          
-          obj[[1]]$add_syntax <- obj[[1]]$add_syntax[!obj[[1]]$add_syntax %in% drop_param] 
-          
+
+          obj[[1]]$add_syntax <- obj[[1]]$add_syntax[!obj[[1]]$add_syntax %in% drop_param]
+
           fit <- fit.model(
             syntax = c(base_syntax, fixed_syntax, obj[[1]]$add_syntax),
             data_file = data_list
           )
-          
+
         } else {
-          
+
           prune = FALSE
           nonconv = FALSE
         }
@@ -296,6 +306,9 @@ search.paths.ind <- function(dat,
       if (testWeights(fit, dat))
         status1 <- "unstable solution"
     }
+
+    initial_prune_done <- TRUE
+    } # end prune gate
     
     #-----------------------------------------------------------#
     #### One last test for adding paths #####
@@ -310,92 +323,99 @@ search.paths.ind <- function(dat,
           converge <- lavInspect(fit, "converged")
           zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
        
-      mi_list[[1]] <- return.mis(fit, elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)])
+      elig_post_prune <- if (identical(stop_crit, "model fit")) {
+        elig_paths[!elig_paths %in% nonconv_path]
+      } else {
+        elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)]
+      }
+      mi_list[[1]] <- return.mis(fit, elig_post_prune)
       #------------------------------------------------------#
       # Add the parameters with the largest MI
       #------------------------------------------------------#
       if (!all(is.na(unlist(mi_list)))){
-        
+
         add_p     <- highest.mi(mi_list      = mi_list,
                                 indices      = indices,
-                                elig_paths   = elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)],
-                                prop_cutoff  = prop_cutoff, 
+                                elig_paths   = elig_post_prune,
+                                prop_cutoff  = prop_cutoff,
                                 n_subj       = n_subj,
                                 chisq_cutoff = chisq_cutoff,
                                 stop_crit    = stop_crit,
                                 allow.mult   = FALSE,
-                                hybrid       = hybrid, 
+                                hybrid       = hybrid,
                                 dir_prop_cutoff = dir_prop_cutoff,
                                 rmsea_cutoff = rmsea_cutoff,
-                                srmr_cutoff = srmr_cutoff,
-                                nnfi_cutoff = nnfi_cutoff,
-                                cfi_cutoff = cfi_cutoff,
-                                n_excellent = n_excellent)
-        
+                                srmr_cutoff  = srmr_cutoff,
+                                nnfi_cutoff  = nnfi_cutoff,
+                                cfi_cutoff   = cfi_cutoff,
+                                n_excellent  = n_excellent,
+                                alpha        = alpha,
+                                correction   = indiv_correct)
+
         add_param <- add_p$add_param
         mi_info   <- add_p$mi_list
-        
+
       } else {
-        
+
         add_param            <- NA
         mi_info              <- NA
-        
+
       }
       #------------------------------------------------------#
-      
-      
+
+
       #------------------------------------------------------#
       # If there are no paths to add.
       #------------------------------------------------------#
       if(all(is.na(add_param))){
-        
+
         search               <- FALSE
         obj[[1]]$final.sol   <- TRUE
-        
+
         res      <- list()
         res[[1]] <- list(
           add_syntax     = obj[[1]]$add_syntax,
           n_paths        = obj[[1]]$n_paths,
           final.sol      = obj[[1]]$final.sol
         )
-        
+
         if(!add_p$goodfit){
           status1 <- "no additional significant paths"
         }
         #------------------------------------------------------#
-        # If there is only a path to add, 
+        # If there is only a path to add,
         #  still searching...
         #------------------------------------------------------#
       } else {
-        
+
         search <- TRUE
-        
+
         obj[[1]]$n_paths     <- obj[[1]]$n_paths + 1
         obj[[1]]$add_syntax  <- append(obj[[1]]$add_syntax, add_param[1])
-      } 
-      
+      }
+
       while(search){ # continue search
-        
-        mi_list <- list() 
-        
+
+        mi_list <- list()
+
         indices <- NULL
-        
+
         nonconverge = TRUE # check convergence at start of while loop since paths added
         # individual level search
         fit <- fit.model(
           syntax = c(base_syntax, fixed_syntax, obj[[1]]$add_syntax),
           data_file = data_list
         )
-        
+
         #------------------------------------------------------#
         # Check to see if model converged.
         #------------------------------------------------------#
-        
+
         if (!inherits(fit, "try-error")){
           # stl 2018/08/16 separated convergence check from error check
           # can't inspect convergence of an error object
-          if (lavaan::lavInspect(fit, "converged") & !any(is.na(lavInspect(fit, what = "list")$se))){ 
-            indices    <- fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea", 
+          if (lavaan::lavInspect(fit, "converged") & !any(is.na(lavInspect(fit, what = "list")$se))){
+            indices    <- fitMeasures(fit, c("chisq", "df", "pvalue", "rmsea",
                                              "srmr", "nnfi", "cfi"))
             converge <- lavInspect(fit, "converged")
             zero_se  <- sum(lavInspect(fit, "se")$beta, na.rm = TRUE) == 0
@@ -411,29 +431,35 @@ search.paths.ind <- function(dat,
           zero_se  <- TRUE
           nonconv <- TRUE
         }
-        mi_list[[1]] <- return.mis(fit, elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)])
-        
-        
+        elig_post_prune <- if (identical(stop_crit, "model fit")) {
+          elig_paths[!elig_paths %in% nonconv_path]
+        } else {
+          elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)]
+        }
+        mi_list[[1]] <- return.mis(fit, elig_post_prune)
+
         #------------------------------------------------------#
         # Add the parameters with the largest MI
         #------------------------------------------------------#
         if (!all(is.na(unlist(mi_list)))){
-          
+
           add_p     <- highest.mi(mi_list      = mi_list,
                                   indices      = indices,
-                                  elig_paths   = elig_paths[!elig_paths %in% c(dropped_param, nonconv_path)],
-                                  prop_cutoff  = prop_cutoff, 
+                                  elig_paths   = elig_post_prune,
+                                  prop_cutoff  = prop_cutoff,
                                   n_subj       = n_subj,
                                   chisq_cutoff = chisq_cutoff,
                                   stop_crit    = stop_crit,
                                   allow.mult   = FALSE,
-                                  hybrid       = hybrid, 
+                                  hybrid       = hybrid,
                                   dir_prop_cutoff = dir_prop_cutoff,
                                   rmsea_cutoff = rmsea_cutoff,
-                                  srmr_cutoff = srmr_cutoff,
-                                  nnfi_cutoff = nnfi_cutoff,
-                                  cfi_cutoff = cfi_cutoff,
-                                  n_excellent = n_excellent)
+                                  srmr_cutoff  = srmr_cutoff,
+                                  nnfi_cutoff  = nnfi_cutoff,
+                                  cfi_cutoff   = cfi_cutoff,
+                                  n_excellent  = n_excellent,
+                                  alpha        = alpha,
+                                  correction   = indiv_correct)
           
           add_param <- add_p$add_param
           mi_info   <- add_p$mi_list

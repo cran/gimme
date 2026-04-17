@@ -17,7 +17,9 @@ search.paths.ms(
   ms_allow,
   ms_tol,
   hybrid,
-  dir_prop_cutoff
+  dir_prop_cutoff,
+  alpha = 0.05,
+  correction = "Bonferroni"
 )
 }
 \arguments{

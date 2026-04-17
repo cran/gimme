@@ -19,27 +19,33 @@
 #' even if the path is not significant. "significance" continues adding
 #' significant paths even after fit is adequate.
 #' @param n_excellent Number of fit indices needed to surpass their cutoffs for an
-#' individual model to be considered excellent. Default is 2. Max is 4. 
+#' individual model to be considered excellent. Default is 2. Max is 4.
+#' @param alpha Alpha level for significance testing. Default is .05.
+#' @param correction Multiple comparison correction method. "Bonferroni" (default)
+#' divides alpha by the number of candidate paths. "fdr" applies the
+#' Benjamini-Hochberg false discovery rate procedure.
 #' @inheritParams count.excellent
-#' @return Returns name of parameter associated with highest MI. If no MI meets 
+#' @return Returns name of parameter associated with highest MI. If no MI meets
 #' the criteria, returns NA.
-#' @keywords internal 
-highest.mi <- function(mi_list, 
+#' @keywords internal
+highest.mi <- function(mi_list,
                        indices,
-                       elig_paths, 
-                       prop_cutoff, 
+                       elig_paths,
+                       prop_cutoff,
                        n_subj,
                        chisq_cutoff,
                        stop_crit = "standard",
                        allow.mult,
                        ms_tol,
                        hybrid,
-                       dir_prop_cutoff, 
+                       dir_prop_cutoff,
                        rmsea_cutoff = .05,
                        srmr_cutoff = .05,
                        nnfi_cutoff = .95,
                        cfi_cutoff = .95,
-                       n_excellent = 2){
+                       n_excellent = 2,
+                       alpha = .05,
+                       correction = "Bonferroni"){
   
   mi  = NULL # appease CRAN check
   sig = NULL # appease CRAN check
@@ -55,16 +61,31 @@ highest.mi <- function(mi_list,
   mi_list <- subset(mi_list, param %in% elig_paths, 
                     select = c("param", "mi", "epc"))
   
-  mi_list$sig <- ifelse(mi_list$mi >= chisq_cutoff, 1, 0)
-  
-  mi_list <- transform(mi_list, 
+  # Assess per-subject significance of each MI.
+  # For FDR, apply Benjamini-Hochberg across all individual MI p-values so that
+  # count = ave(sig, param, FUN = sum) below correctly reflects FDR-adjusted
+  # significance counts per path.
+  if (identical(correction, "fdr") && nrow(mi_list) > 0) {
+    p_vals    <- 1 - stats::pchisq(mi_list$mi, df = 1)
+    m         <- length(p_vals)
+    sorted_p  <- sort(p_vals)
+    bh_thresh <- alpha * seq_len(m) / m
+    k_star    <- max(c(0L, which(sorted_p <= bh_thresh)))
+    bh_cutoff <- if (k_star > 0L) sorted_p[k_star] else -Inf
+    mi_list$sig <- as.integer(p_vals <= bh_cutoff)
+  } else {
+    mi_list$sig <- ifelse(mi_list$mi >= chisq_cutoff, 1, 0)
+  }
+
+  mi_list <- transform(mi_list,
                        sum = ave(mi, param, FUN = sum),
                        count = ave(sig, param, FUN = sum),
                        mean = ave(mi, param, FUN = mean))
-  
+
   mi_list   <- subset(mi_list, !duplicated(param))
+
   mi_list   <- mi_list[order(-mi_list$count, -mi_list$sum), ]
-  
+
   # we need to look at the means rather than the sum
   mi_list_ms <- mi_list[order(-mi_list$count, -mi_list$mean), ]
   
@@ -131,8 +152,7 @@ highest.mi <- function(mi_list,
       }
     }
     
-    if (n_converge <= (n_subj/2)) { 
-      
+    if (n_converge <= (n_subj/2)) {
       add_param <- NA
     }
     #------------------------------------------------------#

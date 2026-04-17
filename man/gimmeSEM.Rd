@@ -40,10 +40,12 @@ gimmeSEM(data        = NULL,
          VAR = FALSE,
          dir_prop_cutoff =0,
          ordered = NULL,
-         group_correct = "Bonferoni Group",
-         stop_crit = "standard",
-           rmsea_cutoff = .05, 
-           srmr_cutoff = .05, 
+         group_correct = "Bonferroni Group",
+         indiv_correct = "Bonferroni",
+         alpha = .05,
+         stop_crit = "model fit",
+           rmsea_cutoff = .05,
+           srmr_cutoff = .05,
            nnfi_cutoff = .95,
            cfi_cutoff = .95,
            n_excellent = 2)
@@ -202,13 +204,23 @@ search space.  Defaults to FALSE.}
 
 \item{ordered}{A character vector containing the names of all ordered categorical variables in the model.}
 
-\item{group_correct}{Indicate how to correct for multiple testing. "Bonferoni Group" (Default) corrects the alpha value for the number of people (N) in th sample; 
-"Bonferoni Paths" corrects according to the number of eligible paths for that individual; a numeric <1 and >0 can be entered to indicate the alpha level desired.}
+\item{group_correct}{Indicate how to correct for multiple testing at the group level.
+"Bonferroni Group" (Default) corrects alpha for the number of people (N) in the sample;
+"Bonferroni Paths" corrects alpha for the number of eligible paths;
+a numeric value between 0 and 1 sets the alpha level directly;
+"fdr" applies a Benjamini-Hochberg false discovery rate correction.}
+
+\item{indiv_correct}{Indicate how to correct for multiple comparisons at the individual level.
+"Bonferroni" (Default) applies a Bonferroni correction dividing alpha by the number of eligible paths;
+"fdr" applies a Benjamini-Hochberg false discovery rate correction.}
+
+\item{alpha}{The base alpha level used for significance testing in all searches (group and individual).
+Defaults to .05.}
 
 \item{stop_crit}{Stopping criterion for the individual-level search.
-"standard" (default) stops when either fit is adequate or no significant
-paths remain. "model fit" continues adding the paths until fit
-is adequate regardless of signficance of those paths. "significance"
+"standard" stops when either fit is adequate or no significant
+paths remain. "model fit" (default) continues adding the paths until fit
+is adequate regardless of significance of those paths. "significance"
 continues adding significant paths even after fit is adequate.}
 
 \item{rmsea_cutoff}{Cutoff for RMSEA for an individual model(default is .05; must be between 0.0 and 1.0).}

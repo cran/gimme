@@ -21,7 +21,9 @@ indiv.search <- function(dat,
                          srmr_cutoff = .05,
                          nnfi_cutoff = .95,
                          cfi_cutoff = .95,
-                         n_excellent = 2) {
+                         n_excellent = 2,
+                         alpha = .05,
+                         indiv_correct = "Bonferroni") {
   
   
   if (!dat$agg){
@@ -85,11 +87,13 @@ indiv.search <- function(dat,
                              chisq_cutoff = ind_cutoff,
                              stop_crit    = stop_crit,
                              ind_z_cutoff  = ind_z_cutoff,
-                             rmsea_cutoff = rmsea_cutoff,
-                             srmr_cutoff  = srmr_cutoff,
-                             nnfi_cutoff  = nnfi_cutoff,
-                             cfi_cutoff   = cfi_cutoff,
-                             n_excellent = n_excellent
+                             rmsea_cutoff  = rmsea_cutoff,
+                             srmr_cutoff   = srmr_cutoff,
+                             nnfi_cutoff   = nnfi_cutoff,
+                             cfi_cutoff    = cfi_cutoff,
+                             n_excellent   = n_excellent,
+                             alpha         = alpha,
+                             indiv_correct = indiv_correct
             )
     
 

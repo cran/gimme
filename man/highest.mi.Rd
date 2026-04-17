@@ -20,7 +20,9 @@ highest.mi(
   srmr_cutoff = 0.05,
   nnfi_cutoff = 0.95,
   cfi_cutoff = 0.95,
-  n_excellent = 2
+  n_excellent = 2,
+  alpha = 0.05,
+  correction = "Bonferroni"
 )
 }
 \arguments{
@@ -60,9 +62,15 @@ significant paths even after fit is adequate.}
 
 \item{n_excellent}{Number of fit indices needed to surpass their cutoffs for an
 individual model to be considered excellent. Default is 2. Max is 4.}
+
+\item{alpha}{Alpha level for significance testing. Default is .05.}
+
+\item{correction}{Multiple comparison correction method. "Bonferroni" (default)
+divides alpha by the number of candidate paths. "fdr" applies the
+Benjamini-Hochberg false discovery rate procedure.}
 }
 \value{
-Returns name of parameter associated with highest MI. If no MI meets 
+Returns name of parameter associated with highest MI. If no MI meets
 the criteria, returns NA.
 }
 \description{

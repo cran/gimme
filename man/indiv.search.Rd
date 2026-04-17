@@ -15,7 +15,9 @@ indiv.search(
   srmr_cutoff = 0.05,
   nnfi_cutoff = 0.95,
   cfi_cutoff = 0.95,
-  n_excellent = 2
+  n_excellent = 2,
+  alpha = 0.05,
+  indiv_correct = "Bonferroni"
 )
 }
 \arguments{
@@ -43,6 +45,8 @@ information.}
 
 \item{n_excellent}{Number of fit indices needed to surpass their cutoffs for an
 individual model to be considered excellent. Default is 2. Max is 4.}
+
+\item{alpha}{Alpha level for significance testing. Default is .05.}
 }
 \value{
 Lists associated with coefficients, fit indices, etc.

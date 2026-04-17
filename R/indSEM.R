@@ -19,7 +19,9 @@
 #'        mult_vars        = NULL,
 #'        mean_center_mult = FALSE,
 #'        standardize      = FALSE,
-#'        stop_crit        = "standard",
+#'        stop_crit        = "model fit",
+#'        indiv_correct    = "Bonferroni",
+#'        alpha            = .05,
 #'        hybrid = FALSE,
 #'        VAR    = FALSE)
 #' @param data The path to the directory where the data files are located, 
@@ -79,10 +81,14 @@
 #' @param standardize Logical. If TRUE, all variables will be standardized to have a mean of zero and a
 #' standard deviation of one. Defaults to FALSE. 
 #' @param stop_crit Stopping criterion for the individual-level search.
-#' "standard" (default) stops when either fit is adequate or no significant
-#' paths remain. "model fit" continues adding the highest-MI path until fit
+#' "standard" stops when either fit is adequate or no significant
+#' paths remain. "model fit" (default) continues adding the highest-MI path until fit
 #' is adequate, even if the path is not significant. "significance"
 #' continues adding significant paths even after fit is adequate.
+#' @param indiv_correct Indicate how to correct for multiple comparisons at the individual level.
+#' "Bonferroni" (Default) applies a Bonferroni correction dividing alpha by the number of eligible paths;
+#' "fdr" applies a Benjamini-Hochberg false discovery rate correction.
+#' @param alpha The base alpha level used for significance testing. Defaults to .05.
 #' @param hybrid Logical. If TRUE, enables hybrid-VAR models where both directed contemporaneous paths and contemporaneous 	
 #' covariances among residuals are candidate relations in the search space. Defaults to FALSE.
 #' @param VAR Logical.  If true, VAR models where contemporaneous covariances among residuals are candidate relations in the 
@@ -109,15 +115,17 @@ indSEM <- function(data   = NULL,
                    ar     = TRUE,
                    plot   = TRUE,
                    paths  = NULL,
-                   exogenous = NULL, 
-                   outcome   = NULL, 
+                   exogenous = NULL,
+                   outcome   = NULL,
                    conv_vars      = NULL,
-                   conv_length    = 16, 
-                   conv_interval = 1, 
+                   conv_length    = 16,
+                   conv_interval  = 1,
                    mult_vars      = NULL,
                    mean_center_mult = FALSE,
                    standardize    = FALSE,
-                   stop_crit      = "standard",
+                   stop_crit      = "model fit",
+                   indiv_correct  = "Bonferroni",
+                   alpha          = .05,
                    hybrid = FALSE,
                    VAR    = FALSE){
   
@@ -134,7 +142,8 @@ indSEM <- function(data   = NULL,
   if(VAR)
     hybrid = TRUE
   
-  stop_crit <- match.arg(stop_crit, c("standard", "model fit", "significance"))
+  stop_crit     <- match.arg(stop_crit, c("standard", "model fit", "significance"))
+  indiv_correct <- match.arg(indiv_correct, c("Bonferroni", "fdr"))
   
   dat  <- setup(data        = data,
                 sep         = sep,
@@ -172,14 +181,21 @@ indSEM <- function(data   = NULL,
     dat$candidate_paths <- grep("*lag", dat$candidate_paths, value = TRUE)
   }
 
-  ind_cutoff <- qchisq(1-.05/length(elig_paths), 1)
-  ind_z_cutoff <- abs(qnorm(.05/length(elig_paths)))
-  store <- indiv.search(dat, 
-                        grp = NULL, 
+  if (indiv_correct == "Bonferroni") {
+    ind_cutoff   <- qchisq(1 - alpha/length(elig_paths), 1)
+    ind_z_cutoff <- abs(qnorm(alpha/length(elig_paths)))
+  } else {
+    ind_cutoff   <- qchisq(1 - alpha, 1)
+    ind_z_cutoff <- abs(qnorm(alpha))
+  }
+  store <- indiv.search(dat,
+                        grp = NULL,
                         ind = dat$file_order,
-                        ind_cutoff = ind_cutoff,
-                        stop_crit = stop_crit,
-                        ind_z_cutoff = ind_z_cutoff)
+                        ind_cutoff    = ind_cutoff,
+                        ind_z_cutoff  = ind_z_cutoff,
+                        stop_crit     = stop_crit,
+                        alpha         = alpha,
+                        indiv_correct = indiv_correct)
 
   final <- final.org(dat, 
                      grp      = NULL, 
